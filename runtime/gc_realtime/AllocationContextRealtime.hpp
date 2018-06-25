@@ -1,5 +1,6 @@
+
 /*******************************************************************************
- * Copyright (c) 1991, 2014 IBM Corp. and others
+ * Copyright (c) 1991, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -27,9 +28,6 @@
 
 #if !defined(ALLOCATIONCONTEXTREALTIME_HPP_)
 #define ALLOCATIONCONTEXTREALTIME_HPP_
-
-#include "omrthread.h"
-#include "j9comp.h"
 
 #include "AllocationContext.hpp"
 #include "AllocationContextSegregated.hpp"

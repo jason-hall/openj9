@@ -1,6 +1,5 @@
-
 /*******************************************************************************
- * Copyright (c) 1991, 2017 IBM Corp. and others
+ * Copyright (c) 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -21,45 +20,19 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-/**
- * @file
- * @ingroup GC_Modron_Metronome
- */
+#if !defined(REALTIMESCHEDULERDELEGATE_HPP_)
+#define REALTIMESCHEDULERDELEGATE_HPP_
 
-#if !defined(CONFIGURATIONSTACCATO_HPP_)
-#define CONFIGURATIONSTACCATO_HPP_
+#include "omr.h"
+#include "GCExtensions.hpp"
 
-#include "omrcfg.h"
+class MM_EnvironmentRealtime;
 
-#include "ConfigurationRealtime.hpp"
-
-class MM_EnvironmentBase;
-class MM_GlobalCollector;
-class MM_Heap;
-
-class MM_ConfigurationStaccato : public MM_ConfigurationRealtime
+class MM_RealtimeSchedulerDelegate
 {
-/* Data members / Types */
 public:
-protected:
-private:
-
-/* Methods */
-public:
-	static MM_Configuration *newInstance(MM_EnvironmentBase *env);
-	
-	virtual MM_GlobalCollector *createGlobalCollector(MM_EnvironmentBase *env);
-	
-	MM_ConfigurationStaccato(MM_EnvironmentBase *env)
-		: MM_ConfigurationRealtime(env)
-	{
-		_typeId = __FUNCTION__;
-	};
-	
-protected:
-	
-private:
+	void reportStopGCIncrement(MM_EnvironmentRealtime *env);
 };
 
+#endif /* defined(REALTIMESCHEDULERDELEGATE_HPP_) */	
 
-#endif /* CONFIGURATIONSTACCATO_HPP_ */

@@ -1,3 +1,4 @@
+
 /*******************************************************************************
  * Copyright (c) 1991, 2018 IBM Corp. and others
  *
@@ -357,7 +358,7 @@ MM_RealtimeAccessBarrier::storeObjectToInternalVMSlot(J9VMThread *vmThread, J9Ob
 void
 MM_RealtimeAccessBarrier::rememberObjectIfBarrierEnabled(J9VMThread *vmThread, J9Object* object)
 {
-	MM_EnvironmentRealtime* env = MM_EnvironmentRealtime::getEnvironment(vmThread);
+	MM_EnvironmentRealtime* env = MM_EnvironmentRealtime::getEnvironment(vmThread->omrVMThread);
 	if (_realtimeGC->isBarrierEnabled()) {
 		rememberObject(env, object);
 	}
@@ -401,7 +402,7 @@ MM_RealtimeAccessBarrier::jniGetPrimitiveArrayCritical(J9VMThread* vmThread, jar
 		VM_VMAccess::inlineExitVMToJNI(vmThread);
 	} else {
 		// acquire access and return a direct pointer
-		MM_JNICriticalRegion::enterCriticalRegion(vmThread, false);
+		MM_JNICriticalRegion::enterCriticalRegion(vmThread->omrVMThread, false);
 		data = (void *)_extensions->indexableObjectModel.getDataPointerForContiguous(arrayObject);
 		if(NULL != isCopy) {
 			*isCopy = JNI_FALSE;
@@ -459,7 +460,7 @@ MM_RealtimeAccessBarrier::jniReleasePrimitiveArrayCritical(J9VMThread* vmThread,
 			Trc_MM_JNIReleasePrimitiveArrayCritical_invalid(vmThread, arrayObject, elems, data);
 		}
 
-		MM_JNICriticalRegion::exitCriticalRegion(vmThread, false);
+		MM_JNICriticalRegion::exitCriticalRegion(vmThread->omrVMThread, false);
 	}
 }
 
@@ -530,7 +531,7 @@ MM_RealtimeAccessBarrier::jniGetStringCritical(J9VMThread* vmThread, jstring str
 		vmThread->jniCriticalCopyCount += 1;
 	} else {
 		// acquire access and return a direct pointer
-		MM_JNICriticalRegion::enterCriticalRegion(vmThread, hasVMAccess);
+		MM_JNICriticalRegion::enterCriticalRegion(vmThread->omrVMThread, hasVMAccess);
 		J9Object *stringObject = (J9Object*)J9_JNI_UNWRAP_REFERENCE(str);
 		J9IndexableObject *valueObject = (J9IndexableObject*)J9VMJAVALANGSTRING_VALUE(vmThread, stringObject);
 
@@ -581,7 +582,7 @@ MM_RealtimeAccessBarrier::jniReleaseStringCritical(J9VMThread* vmThread, jstring
 		}
 	} else {
 		// direct pointer, just drop access
-		MM_JNICriticalRegion::exitCriticalRegion(vmThread, hasVMAccess);
+		MM_JNICriticalRegion::exitCriticalRegion(vmThread->omrVMThread, hasVMAccess);
 	}
 
 	if (hasVMAccess) {
@@ -606,7 +607,7 @@ MM_RealtimeAccessBarrier::checkClassLive(J9JavaVM *javaVM, J9Class *classPtr)
 		J9Object *classLoaderObject = classLoader->classLoaderObject;
 
 		if (NULL != classLoaderObject) {
-			if (realtimeGC->_unmarkedImpliesClasses) {
+			if (realtimeGC->_realtimeDelegate._unmarkedImpliesClasses) {
 				/*
 				 * Mark is complete but GC cycle is still be in progress
 				 * so we just can check is the correspondent class loader object marked

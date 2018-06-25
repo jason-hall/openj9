@@ -83,7 +83,7 @@ MM_MarkingSchemeRootClearer::scanWeakReferenceObjects(MM_EnvironmentBase *env)
 				MM_ReferenceObjectList *list = &regionExtension->_referenceObjectLists[i];
 				list->startWeakReferenceProcessing();
 				if (!list->wasWeakListEmpty()) {
-					_markingDelegate->processReferenceList(env, region, list->getPriorWeakList(), &gcEnv->_markJavaStats._weakReferenceStats);
+					_markingDelegate->processReferenceList(env, region, list->getPriorWeakList(), &MM_GCExtensions::getExtensions(env)->markJavaStats._weakReferenceStats);
 				}
 			}
 		}
@@ -120,7 +120,7 @@ MM_MarkingSchemeRootClearer::scanSoftReferenceObjects(MM_EnvironmentBase *env)
 				MM_ReferenceObjectList *list = &regionExtension->_referenceObjectLists[i];
 				list->startSoftReferenceProcessing();
 				if (!list->wasSoftListEmpty()) {
-					_markingDelegate->processReferenceList(env, region, list->getPriorSoftList(), &gcEnv->_markJavaStats._softReferenceStats);
+					_markingDelegate->processReferenceList(env, region, list->getPriorSoftList(), &MM_GCExtensions::getExtensions(env)->markJavaStats._softReferenceStats);
 				}
 			}
 		}
@@ -159,7 +159,7 @@ MM_MarkingSchemeRootClearer::scanPhantomReferenceObjects(MM_EnvironmentBase *env
 				MM_ReferenceObjectList *list = &regionExtension->_referenceObjectLists[i];
 				list->startPhantomReferenceProcessing();
 				if (!list->wasPhantomListEmpty()) {
-					_markingDelegate->processReferenceList(env, region, list->getPriorPhantomList(), &gcEnv->_markJavaStats._phantomReferenceStats);
+					_markingDelegate->processReferenceList(env, region, list->getPriorPhantomList(), &MM_GCExtensions::getExtensions(env)->markJavaStats._phantomReferenceStats);
 				}
 			}
 		}

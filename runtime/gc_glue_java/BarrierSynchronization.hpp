@@ -67,8 +67,8 @@ public:
 	 * also transitionally used for the parts of Staccato that have not
 	 * been made concurrent.
 	 */
-	void preRequestExclusiveVMAccess(J9VMThread *threadRequestingExclusive);
-	void postRequestExclusiveVMAccess(J9VMThread *threadRequestingExclusive);
+	void preRequestExclusiveVMAccess(OMR_VMThread *threadRequestingExclusive);
+	void postRequestExclusiveVMAccess(OMR_VMThread *threadRequestingExclusive);
 	UDATA requestExclusiveVMAccess(MM_EnvironmentBase *env, UDATA block, UDATA *gcPriority);
 	void waitForExclusiveVMAccess(MM_EnvironmentBase *env, bool waitRequired);
 	void acquireExclusiveVMAccess(MM_EnvironmentBase *env, bool waitRequired);

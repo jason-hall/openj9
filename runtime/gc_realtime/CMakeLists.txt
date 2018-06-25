@@ -21,34 +21,13 @@
 ################################################################################
 
 add_library(j9realtime STATIC
-	AllocationContextRealtime.cpp
-	BarrierSynchronization.cpp
-	ConfigurationRealtime.cpp
-	EnvironmentRealtime.cpp
-	GlobalAllocationManagerRealtime.cpp
-	HeapRegionDescriptorRealtime.cpp
-	IncrementalOverflow.cpp
-	IncrementalParallelTask.cpp
-	MemorySubSpaceMetronome.cpp
-	MetronomeAlarm.cpp
-	MetronomeAlarmThread.cpp
-	OSInterface.cpp
 	OwnableSynchronizerObjectBufferRealtime.cpp
-	ProcessorInfo.cpp
 	RealtimeAccessBarrier.cpp
-	RealtimeGC.cpp
-	RealtimeMarkingScheme.cpp
-	RealtimeMarkTask.cpp
-	RealtimeRootScanner.cpp
-	RealtimeSweepTask.cpp
 	ReferenceObjectBufferRealtime.cpp
 	Scheduler.cpp
 	SweepSchemeRealtime.cpp
 	Timer.cpp
 	UnfinalizedObjectBufferRealtime.cpp
-	UtilizationTracker.cpp
-	WorkPacketsRealtime.cpp
-	YieldCollaborator.cpp
 
 )
 

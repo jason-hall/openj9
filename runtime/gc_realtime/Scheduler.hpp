@@ -29,14 +29,12 @@
 #if !defined(SCHEDULER_HPP_)
 #define SCHEDULER_HPP_
 
-#include "j9.h"
-#include "j9cfg.h"
-
 #include "Base.hpp"
 #include "GCCode.hpp"
-#include "GCExtensions.hpp"
+#include "GCExtensionsBase.hpp"
 #include "Metronome.hpp"
 #include "ParallelDispatcher.hpp"
+#include "RealtimeSchedulerDelegate.hpp"
 #include "YieldCollaborator.hpp"
 
 class MM_OSInterface;
@@ -71,6 +69,8 @@ private:
 	U_64 _mutatorStartTimeInNanos; /**< Time in nanoseconds when the mutator slice started.  This is updated at increment end and when a GC quantum is skipped due to shouldMutatorDoubleBeat */
 	U_64 _incrementStartTimeInNanos; /**< Time in nanoseconds when the last gc increment started */
 	MM_GCCode _gcCode; /**< The gc code that will be used for the next GC cycle.  If this is modified during a collect it will be unused.  This variable is reset at the end of every cycle to the default collection type */
+	MM_RealtimeSchedulerDelegate _delegate;
+
 protected:
 public:
 	bool _isInitialized; /**< Set to true when all threads have been started */
@@ -101,8 +101,8 @@ public:
 	UDATA _mutatorCount;
 
 	MM_RealtimeGC *_gc;
-	J9JavaVM *_vm;
-	MM_GCExtensions *_extensions;
+	OMR_VM *_vm;
+	MM_GCExtensionsBase *_extensions;
  	bool _doSchedulingBarrierEvents;
 
 	U_32 _gcOn;      /* Are we in some long GC cycle? */
@@ -193,7 +193,7 @@ public:
 	 * with MMU, etc. parameters chosen so that the GC will not yield to the 
 	 * mutator until an entire GC cycle has completed. 
 	 */
-	static void initializeForVirtualSTW(MM_GCExtensions *ext);
+	static void initializeForVirtualSTW(MM_GCExtensionsBase *ext);
 
 	bool isInitialized() { return _isInitialized; }
 
@@ -223,7 +223,7 @@ public:
 	void yieldFromGC(MM_EnvironmentRealtime *env, bool distanceChecked = false);
 	void waitForMutatorsToStop(MM_EnvironmentRealtime *env);
 	void startMutators(MM_EnvironmentRealtime *env);
-	bool continueGC(MM_EnvironmentRealtime *, GCReason reason, UDATA reasonParameter, J9VMThread *_vmThread, bool doRequestExclusiveVMAccess);  /* Non-blocking and typicallly called by an alarm handler.  Returns 1 if we did resume GC (non-recursive). */
+	bool continueGC(MM_EnvironmentRealtime *, GCReason reason, UDATA reasonParameter, OMR_VMThread *_vmThread, bool doRequestExclusiveVMAccess);  /* Non-blocking and typicallly called by an alarm handler.  Returns 1 if we did resume GC (non-recursive). */
 	void setGCPriority(MM_EnvironmentBase *env, UDATA priority); /* sets the priority for all gc threads */
 	void completeCurrentGCSynchronously(MM_EnvironmentRealtime *env = NULL);	
 	
@@ -263,8 +263,8 @@ public:
 		_threadWaitingOnMasterThreadMonitor(NULL),
 		_mutatorCount(0),
 		_gc(NULL),
-		_vm((J9JavaVM *)env->getOmrVM()->_language_vm),
-		_extensions(MM_GCExtensions::getExtensions(_vm)),
+		_vm(env->getOmrVM()),
+		_extensions(MM_GCExtensionsBase::getExtensions(_vm)),
 		_doSchedulingBarrierEvents(false),
 		_gcOn(METRONOME_GC_OFF),
 		_mode(MUTATOR),

@@ -29,9 +29,6 @@
 #if !defined(CONFIGURATIONREALTIME_HPP_)
 #define CONFIGURATIONREALTIME_HPP_
 
-#include "j9.h"
-#include "j9cfg.h"
-
 #include "Configuration.hpp"
 #include "EnvironmentRealtime.hpp"
 

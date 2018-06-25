@@ -73,7 +73,7 @@ MM_ReferenceObjectBufferRealtime::flushImpl(MM_EnvironmentBase* env)
 	MM_ReferenceObjectList *referenceObjectList = &extensions->referenceObjectLists[_referenceObjectListIndex];
 	referenceObjectList->addAll(env, _referenceObjectType, _head, _tail);
 	_referenceObjectListIndex += 1;
-	if (MM_HeapRegionDescriptorRealtime::getReferenceObjectListCount(env) == _referenceObjectListIndex) {
+	if (MM_GCExtensions::getReferenceObjectListCount(env) == _referenceObjectListIndex) {
 		_referenceObjectListIndex = 0;
 	}
 }

@@ -23,9 +23,8 @@
 #include "Dispatcher.hpp"
 #include "EnvironmentRealtime.hpp"
 #include "IncrementalParallelTask.hpp"
-#include "Scheduler.hpp"
-
 #include "ModronAssertions.h"
+#include "Scheduler.hpp"
 
 void
 MM_IncrementalParallelTask::synchronizeGCThreads(MM_EnvironmentBase *envBase, const char *id)

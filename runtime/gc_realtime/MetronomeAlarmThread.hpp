@@ -31,6 +31,7 @@
 #include "j9.h"
 #include "j9cfg.h"
 
+#include "GCExtensions.hpp"
 #include "ProcessorInfo.hpp"
 #include "MetronomeAlarm.hpp"
 #include "EnvironmentRealtime.hpp"

@@ -80,3 +80,4 @@ GC_ObjectModelDelegate::calculateObjectDetailsForCopy(MM_EnvironmentBase *env, M
 	*hotFieldAlignmentDescriptor = clazz->instanceHotFieldDescription;
 }
 #endif /* defined(OMR_GC_MODRON_SCAVENGER) */
+

@@ -1,6 +1,6 @@
  
 /*******************************************************************************
- * Copyright (c) 1991, 2014 IBM Corp. and others
+ * Copyright (c) 1991, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -29,11 +29,8 @@
 #if !defined(PROCESSORINFO_HPP_)
 #define PROCESSORINFO_HPP_
 
-#include "j9.h"
-#include "j9cfg.h"
-
 #include "BaseVirtual.hpp"
-#include "GCExtensions.hpp"
+#include "GCExtensionsBase.hpp"
 
 class MM_EnvironmentBase;
 class MM_OSInterface;

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 1991, 2014 IBM Corp. and others
+ * Copyright (c) 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -20,45 +20,38 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#if !defined(ENVIRONMENTSTACCATO_HPP_)
-#define ENVIRONMENTSTACCATO_HPP_
+#if !defined(STACCATOGCDELEGATE_HPP_)
+#define STACCATOGCDELEGATE_HPP_
 
-#include "omrcfg.h"
-
-#include "Base.hpp"
+#include "omr.h"
 #include "EnvironmentRealtime.hpp"
+#include "RealtimeAccessBarrier.hpp"
+#include "RealtimeGCDelegate.hpp"
 
-class MM_GCExtensionsBase;
+class MM_StaccatoGC;
 
-class MM_EnvironmentStaccato : public MM_EnvironmentRealtime
+class MM_StaccatoGCDelegate
 {
-/* Data section */
-public:
-protected:
 private:
+	OMR_VM *_vm;
+	MM_StaccatoGC *_staccatoGC;
 
-/* Functionality Section */
 public:
-	static MM_EnvironmentStaccato *newInstance(MM_GCExtensionsBase *extensions, OMR_VMThread *omrVMThread);
-	virtual void kill();
+	MM_StaccatoGCDelegate(MM_EnvironmentBase *env, MM_StaccatoGC *staccatoGC) :
+		_vm(env->getOmrVM()),
+		_staccatoGC(staccatoGC) {}
 
-	MMINLINE static MM_EnvironmentStaccato *getEnvironment(OMR_VMThread *omrVMThread) { return static_cast<MM_EnvironmentStaccato*>(omrVMThread->_gcOmrVMThreadExtensions); }
-	MMINLINE static MM_EnvironmentStaccato *getEnvironment(MM_EnvironmentRealtime *ptr) { return (MM_EnvironmentStaccato *)ptr; }
-	MMINLINE static MM_EnvironmentStaccato *getEnvironment(MM_EnvironmentBase *ptr) { return (MM_EnvironmentStaccato *)ptr; }	
+	virtual MM_RealtimeAccessBarrier* allocateAccessBarrier(MM_EnvironmentBase *env);
+	virtual void enableDoubleBarrier(MM_EnvironmentBase* env);
+	virtual void disableDoubleBarrierOnThread(MM_EnvironmentBase* env, OMR_VMThread* vmThread);
+	virtual void disableDoubleBarrier(MM_EnvironmentBase* env);
 
-	MM_EnvironmentStaccato(OMR_VMThread *omrVMThread) :
-		MM_EnvironmentRealtime(omrVMThread)
-	{
-		_typeId = __FUNCTION__;
-	}
-	
-protected:
-	virtual bool initialize(MM_GCExtensionsBase *extensions);
-	virtual void tearDown(MM_GCExtensionsBase *extensions);
-	
-private:
-	
+	/* New methods */
+#if defined(J9VM_GC_DYNAMIC_CLASS_UNLOADING)
+	bool doClassTracing(MM_EnvironmentRealtime* env);
+#endif /* J9VM_GC_DYNAMIC_CLASS_UNLOADING */
+	virtual bool doTracing(MM_EnvironmentRealtime* env, MM_RealtimeGCDelegate *realtimeDelegate);
 };
 
-#endif /* ENVIRONMENTSTACCATO_HPP_ */
+#endif /* defined(STACCATOGCDELEGATE_HPP_) */	
 

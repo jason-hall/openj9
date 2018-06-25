@@ -249,7 +249,7 @@ MM_StaccatoAccessBarrier::scanContiguousArray(MM_EnvironmentRealtime *env, J9Ind
 {
 	J9JavaVM *vm = (J9JavaVM *)env->getLanguageVM();
 #if defined(J9VM_GC_DYNAMIC_CLASS_UNLOADING)
-	if(_realtimeGC->isDynamicClassUnloadingEnabled()) {
+	if(_realtimeGC->_realtimeDelegate.isDynamicClassUnloadingEnabled()) {
 		rememberObject(env, (J9Object *)objectPtr);
 	}
 #endif /* J9VM_GC_DYNAMIC_CLASS_UNLOADING */		
@@ -314,7 +314,7 @@ MM_StaccatoAccessBarrier::markAndScanContiguousArray(MM_EnvironmentRealtime *env
 I_32
 MM_StaccatoAccessBarrier::backwardReferenceArrayCopyIndex(J9VMThread *vmThread, J9IndexableObject *srcObject, J9IndexableObject *destObject, I_32 srcIndex, I_32 destIndex, I_32 lengthInSlots)
 {
-	MM_EnvironmentRealtime *env = MM_EnvironmentRealtime::getEnvironment(vmThread);
+	MM_EnvironmentRealtime *env = MM_EnvironmentRealtime::getEnvironment(vmThread->omrVMThread);
 	
 	/* a high level caller ensured destObject == srcObject */
 		
@@ -341,7 +341,7 @@ MM_StaccatoAccessBarrier::backwardReferenceArrayCopyIndex(J9VMThread *vmThread, 
 I_32
 MM_StaccatoAccessBarrier::forwardReferenceArrayCopyIndex(J9VMThread *vmThread, J9IndexableObject *srcObject, J9IndexableObject *destObject, I_32 srcIndex, I_32 destIndex, I_32 lengthInSlots)
 {
-	MM_EnvironmentRealtime *env = MM_EnvironmentRealtime::getEnvironment(vmThread);
+	MM_EnvironmentRealtime *env = MM_EnvironmentRealtime::getEnvironment(vmThread->omrVMThread);
 
 	if (_extensions->indexableObjectModel.isInlineContiguousArraylet(destObject)
 			&& _extensions->indexableObjectModel.isInlineContiguousArraylet(srcObject)) {

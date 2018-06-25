@@ -34,8 +34,9 @@
  * @param accessMask  the types of access that were held
  */
 void
-MM_JNICriticalRegion::reacquireAccess(J9VMThread* vmThread, UDATA accessMask)
+MM_JNICriticalRegion::reacquireAccess(OMR_VMThread* omrVMThread, UDATA accessMask)
 {
+	J9VMThread *vmThread = (J9VMThread *)omrVMThread->_language_vmthread;
 #if defined(J9VM_INTERP_ATOMIC_FREE_JNI)
 	// Current thread must have entered the VM before acquiring exclusive
 	Assert_MM_false(vmThread->inNative);
@@ -75,8 +76,9 @@ MM_JNICriticalRegion::reacquireAccess(J9VMThread* vmThread, UDATA accessMask)
  * @param accessMask  the types of access to re-acquire
  */
 void
-MM_JNICriticalRegion::releaseAccess(J9VMThread* vmThread, UDATA* accessMask)
+MM_JNICriticalRegion::releaseAccess(OMR_VMThread* omrVMThread, UDATA* accessMask)
 {
+	J9VMThread *vmThread = (J9VMThread *)omrVMThread->_language_vmthread;
 #if defined(J9VM_INTERP_ATOMIC_FREE_JNI)
 	// Current thread must have entered the VM before acquiring exclusive
 	Assert_MM_false(vmThread->inNative);

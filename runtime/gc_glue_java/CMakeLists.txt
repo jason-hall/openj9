@@ -25,6 +25,7 @@ target_sources(j9vm_gc_glue
 	INTERFACE
 		${CMAKE_CURRENT_SOURCE_DIR}/ArrayletObjectModel.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/ArrayletObjectModelBase.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/BarrierSynchronization.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/CollectorLanguageInterfaceImpl.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/CompactDelegate.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/CompactSchemeFixupObject.cpp
@@ -37,12 +38,22 @@ target_sources(j9vm_gc_glue
 		${CMAKE_CURRENT_SOURCE_DIR}/MarkingDelegate.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/MarkingSchemeRootClearer.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/MarkingSchemeRootMarker.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/MetronomeAlarmThread.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/MixedObjectModel.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/ObjectModel.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/ObjectModelDelegate.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/RealtimeGCDelegate.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/RealtimeMarkTask.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/RealtimeMarkingScheme.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/RealtimeRootScanner.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/RootScanner.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/ScavengerBackOutScanner.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/ScavengerRootClearer.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/ScavengerRootScanner.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/StaccatoGCDelegate.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/StackSlotValidator.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/VMThreadIterator.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/VMThreadSlotIterator.cpp
 )
 target_link_libraries(j9vm_gc_glue
 	INTERFACE
@@ -56,6 +67,8 @@ target_include_directories(j9vm_gc_glue
 		${j9vm_SOURCE_DIR}/gc_realtime
 		${j9vm_SOURCE_DIR}/gc_trace
 		${j9vm_SOURCE_DIR}/gc_vlhgc
+		${omr_SOURCE_DIR}/gc/realtime
+		${omr_SOURCE_DIR}/gc/staccato
 )
 add_library(j9vm_util_glue INTERFACE)
 target_sources(j9vm_util_glue

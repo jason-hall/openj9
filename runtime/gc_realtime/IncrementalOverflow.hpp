@@ -1,6 +1,6 @@
 
 /*******************************************************************************
- * Copyright (c) 1991, 2014 IBM Corp. and others
+ * Copyright (c) 1991, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -29,7 +29,6 @@
 #if !defined(INCREMENTALOVERFLOW_HPP_)
 #define INCREMENTALOVERFLOW_HPP_
 
-#include "j9.h"
 #include "EnvironmentBase.hpp"
 #include "Metronome.hpp"
 #include "WorkPacketOverflow.hpp"
@@ -46,7 +45,7 @@ class MM_IncrementalOverflow : public MM_WorkPacketOverflow
 public:
 protected:
 private:
-	MM_GCExtensions *_extensions;
+	MM_GCExtensionsBase *_extensions;
 	MM_HeapRegionDescriptorRealtime *_overflowList;
 	bool _overflowThisGCCycle; /**< set to signify an overflow happened sometime during GC cycle */
 	

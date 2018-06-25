@@ -23,19 +23,12 @@
 #if !defined(ENVIRONMENTREALTIME_HPP_)
 #define ENVIRONMENTREALTIME_HPP_
 
-#include "j9.h"
-#include "j9cfg.h"
-
 #include "Base.hpp"
 #include "EnvironmentBase.hpp"
+#include "GCExtensionsBase.hpp"
 #include "OSInterface.hpp"
-#include "OwnableSynchronizerObjectBufferRealtime.hpp"
-#include "ReferenceObjectBufferRealtime.hpp"
 #include "Scheduler.hpp"
-#include "UnfinalizedObjectBufferRealtime.hpp"
-#include "WorkStack.hpp"
 
-#include "GCExtensions.hpp"
 
 class MM_AllocationContextRealtime;
 class MM_HeapRegionDescriptorRealtime;
@@ -74,7 +67,6 @@ public:
 	static MM_EnvironmentRealtime *newInstance(MM_GCExtensionsBase *extensions, OMR_VMThread *omrVMThread);
 	virtual void kill();
 
-	MMINLINE static MM_EnvironmentRealtime *getEnvironment(J9VMThread *vmThread) { return (MM_EnvironmentRealtime *)vmThread->gcExtensions; }
 	MMINLINE static MM_EnvironmentRealtime *getEnvironment(OMR_VMThread *omrVMThread) { return static_cast<MM_EnvironmentRealtime*>(omrVMThread->_gcOmrVMThreadExtensions); }
 	MMINLINE static MM_EnvironmentRealtime *getEnvironment(MM_EnvironmentBase *ptr) { return (MM_EnvironmentRealtime *)ptr; }
 	
@@ -135,8 +127,8 @@ public:
 	
 	MM_EnvironmentRealtime(OMR_VMThread *omrVMThread) :
 		MM_EnvironmentBase(omrVMThread),
-		_scheduler((MM_Scheduler *)MM_GCExtensions::getExtensions(omrVMThread)->dispatcher),
-		_rootScanner(NULL),
+		_scheduler((MM_Scheduler *)MM_GCExtensionsBase::getExtensions(omrVMThread->_vm)->dispatcher),
+		_rootScanner(NULL), //OMRTODO: THIS LINE ADDED? SAME BELOW
 		_osInterface(_scheduler->_osInterface),
 		_overflowCache(NULL),
 		_overflowCacheCount(0),
@@ -147,9 +139,9 @@ public:
 		_typeId = __FUNCTION__;
 	}
 	
-	MM_EnvironmentRealtime(J9JavaVM *vm) :
-		MM_EnvironmentBase(vm->omrVM),
-		_scheduler((MM_Scheduler *)MM_GCExtensions::getExtensions(vm)->dispatcher),
+	MM_EnvironmentRealtime(OMR_VM *vm) :
+		MM_EnvironmentBase(vm),
+		_scheduler((MM_Scheduler *)MM_GCExtensionsBase::getExtensions(vm)->dispatcher),
 		_rootScanner(NULL),
 		_osInterface(_scheduler->_osInterface),
 		_overflowCache(NULL),

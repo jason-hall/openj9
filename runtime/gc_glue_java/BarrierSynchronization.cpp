@@ -87,12 +87,13 @@ MM_BarrierSynchronization::tearDown(MM_EnvironmentBase *env)
  * be requesting exclusive vm access.
  */
 void
-MM_BarrierSynchronization::preRequestExclusiveVMAccess(J9VMThread *threadRequestingExclusive)
+MM_BarrierSynchronization::preRequestExclusiveVMAccess(OMR_VMThread *threadRequestingExclusive)
 {
 	if (threadRequestingExclusive == NULL) {
 		return;
 	}
-	threadRequestingExclusive->javaVM->internalVMFunctions->internalReleaseVMAccess(threadRequestingExclusive);
+	J9VMThread *vmThread = (J9VMThread *)threadRequestingExclusive->_language_vmthread;
+	vmThread->javaVM->internalVMFunctions->internalReleaseVMAccess(vmThread);
 }
 
 /**
@@ -103,12 +104,13 @@ MM_BarrierSynchronization::preRequestExclusiveVMAccess(J9VMThread *threadRequest
  * exclusive vm access.
  */
 void
-MM_BarrierSynchronization::postRequestExclusiveVMAccess(J9VMThread *threadRequestingExclusive)
+MM_BarrierSynchronization::postRequestExclusiveVMAccess(OMR_VMThread *threadRequestingExclusive)
 {
 	if (NULL == threadRequestingExclusive) {
 		return;
 	}
-	threadRequestingExclusive->javaVM->internalVMFunctions->internalAcquireVMAccess(threadRequestingExclusive);
+	J9VMThread *vmThread = (J9VMThread *)threadRequestingExclusive->_language_vmthread;
+	vmThread->javaVM->internalVMFunctions->internalAcquireVMAccess(vmThread);
 }
 
 

@@ -24,9 +24,9 @@
 #if !defined(STACCATOGC_HPP_)
 #define STACCATOGC_HPP_
 
-#include "j9.h"
-#include "j9cfg.h"
+#include "omrcfg.h"
 #include "modronopt.h"
+#include "StaccatoGCDelegate.hpp"
 
 #include "RealtimeGC.hpp"
 
@@ -41,6 +41,7 @@ public:
 protected:
 private:
 	bool _moreTracingRequired; /**< Is used to decide if there needs to be another pass of the tracing loop. */
+	MM_StaccatoGCDelegate _staccatoDelegate;
 
 /* Methods */
 public:
@@ -51,7 +52,9 @@ public:
 	void tearDown(MM_EnvironmentBase *env);
 
 	MM_StaccatoGC(MM_EnvironmentBase *env) :
-		MM_RealtimeGC(env)
+		MM_RealtimeGC(env),
+		_moreTracingRequired(false),
+		_staccatoDelegate(env, this)
 	{
 		_typeId = __FUNCTION__;
 	}
@@ -62,17 +65,10 @@ public:
 	virtual void enableWriteBarrier(MM_EnvironmentBase* env);
 	virtual void disableWriteBarrier(MM_EnvironmentBase* env);
 	virtual void enableDoubleBarrier(MM_EnvironmentBase* env);
-	virtual void disableDoubleBarrierOnThread(MM_EnvironmentBase* env, J9VMThread* vmThread);
+	virtual void disableDoubleBarrierOnThread(MM_EnvironmentBase* env, OMR_VMThread *vmThread);
 	virtual void disableDoubleBarrier(MM_EnvironmentBase* env);
-	
-	/* New methods */
-#if defined(J9VM_GC_DYNAMIC_CLASS_UNLOADING)
-	bool doClassTracing(MM_EnvironmentRealtime* env);
-#endif /* J9VM_GC_DYNAMIC_CLASS_UNLOADING */
+
 	void flushRememberedSet(MM_EnvironmentRealtime *env);
-	
-protected:
-private:
 };
 
 #endif /* STACCATOGC_HPP_ */

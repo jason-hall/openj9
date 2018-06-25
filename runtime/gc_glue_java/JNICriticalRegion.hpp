@@ -47,8 +47,8 @@ public:
 private:
 protected:
 public:
-	static void reacquireAccess(J9VMThread* vmThread, UDATA accessMask);
-	static void releaseAccess(J9VMThread* vmThread, UDATA* accessMask);
+	static void reacquireAccess(OMR_VMThread* vmThread, UDATA accessMask);
+	static void releaseAccess(OMR_VMThread* vmThread, UDATA* accessMask);
 
 	/**
 	 * Enter a JNI critical region (i.e. GetPrimitiveArrayCritical or GetStringCritical).
@@ -59,8 +59,9 @@ public:
 	 * @param hasVMAccess  true if caller has acquired VM access, false if not
 	 */
 	static MMINLINE void
-	enterCriticalRegion(J9VMThread* vmThread, bool hasVMAccess)
+	enterCriticalRegion(OMR_VMThread* omrVMThread, bool hasVMAccess)
 	{
+		J9VMThread *vmThread = (J9VMThread *)omrVMThread->_language_vmthread;
 		if (J9_ARE_ANY_BITS_SET(vmThread->publicFlags, J9_PUBLIC_FLAGS_DEBUG_VM_ACCESS)) {
 			Assert_MM_true(J9_VM_FUNCTION(vmThread, currentVMThread)(vmThread->javaVM) == vmThread);
 		}
@@ -126,8 +127,9 @@ public:
 	 * @param hasVMAccess  true if caller has acquired VM access, false if not
 	 */
 	static MMINLINE void
-	exitCriticalRegion(J9VMThread* vmThread, bool hasVMAccess)
+	exitCriticalRegion(OMR_VMThread* omrVMThread, bool hasVMAccess)
 	{
+		J9VMThread *vmThread = (J9VMThread *)omrVMThread->_language_vmthread;
 		if (J9_ARE_ANY_BITS_SET(vmThread->publicFlags, J9_PUBLIC_FLAGS_DEBUG_VM_ACCESS)) {
 			Assert_MM_true(J9_VM_FUNCTION(vmThread, currentVMThread)(vmThread->javaVM) == vmThread);
 		}

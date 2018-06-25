@@ -50,8 +50,14 @@ SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-excepti
 			<include path="gc_realtime" type="relativepath">
 				<include-if condition="spec.flags.module_gc_realtime"/>
 			</include>
-			<include path="gc_staccato" type="relativepath">
+			<include path="omr/gc/realtime" type="relativepath">
 				<include-if condition="spec.flags.module_gc_realtime"/>
+			</include>
+			<include path="gc_staccato" type="relativepath">
+				<include-if condition="spec.flags.module_gc_staccato"/>
+			</include>
+			<include path="omr/gc/staccato" type="relativepath">
+				<include-if condition="spec.flags.module_gc_staccato"/>
 			</include>
 			<include path="gc_stats" type="relativepath"/>
 			<include path="omr/gc/stats" type="relativepath"/>

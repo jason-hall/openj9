@@ -205,12 +205,12 @@ public:
 	 */
 	MMINLINE MM_StringTable* getStringTable() { return stringTable; }
 
-	MMINLINE UDATA getDynamicMaxSoftReferenceAge()
+	virtual MMINLINE UDATA getDynamicMaxSoftReferenceAge()
 	{
 		return dynamicMaxSoftReferenceAge;
 	}
 
-	MMINLINE UDATA getMaxSoftReferenceAge()
+	virtual MMINLINE UDATA getMaxSoftReferenceAge()
 	{
 		return maxSoftReferenceAge;
 	}
@@ -252,6 +252,9 @@ public:
 		}
 	}
 
+	static UDATA getUnfinalizedObjectListCount(MM_EnvironmentBase *env) {return MM_GCExtensions::getExtensions(env)->gcThreadCount;}
+	static UDATA getOwnableSynchronizerObjectListCount(MM_EnvironmentBase *env) {return MM_GCExtensions::getExtensions(env)->gcThreadCount;}
+	static UDATA getReferenceObjectListCount(MM_EnvironmentBase *env) {return MM_GCExtensions::getExtensions(env)->gcThreadCount;}
 
 	static MM_GCExtensions* getExtensions(OMR_VM* omrVM) { return static_cast<MM_GCExtensions*>(MM_GCExtensionsBase::getExtensions(omrVM)); }
 	static MM_GCExtensions* getExtensions(OMR_VMThread* omrVMThread) { return static_cast<MM_GCExtensions*>(MM_GCExtensionsBase::getExtensions(omrVMThread->_vm)); }

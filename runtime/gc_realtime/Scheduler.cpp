@@ -20,37 +20,22 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#include "j9.h"
-#include "j9cfg.h"
-#include "j9protos.h"
-#include "j9consts.h"
-#include "modronopt.h"
-#include "ModronAssertions.h"
-
 #include <string.h>
 
 #include "AtomicOperations.hpp"
 #include "BarrierSynchronization.hpp"
-#include "ClassModel.hpp"
 #include "Dispatcher.hpp"
 #include "EnvironmentRealtime.hpp"
-#include "FinalizerSupport.hpp"
 #include "GCCode.hpp"
-#include "GCExtensions.hpp"
+#include "GCExtensionsBase.hpp"
 #include "Heap.hpp"
 #include "IncrementalParallelTask.hpp"
 #include "MemoryPoolSegregated.hpp"
-#include "MemorySpace.hpp"
 #include "MemorySubSpaceMetronome.hpp"
 #include "Metronome.hpp"
 #include "MetronomeAlarmThread.hpp"
 #include "RealtimeGC.hpp"
-#include "modronapi.hpp"
-#include "ObjectModel.hpp"
 #include "OSInterface.hpp"
-#include "ProcessorInfo.hpp"
-#include "RegionPoolSegregated.hpp"
-#include "RootScanner.hpp"
 #include "Scheduler.hpp"
 #include "Timer.hpp"
 #include "UtilizationTracker.hpp"
@@ -63,7 +48,7 @@
 MM_Scheduler*
 MM_Scheduler::newInstance(MM_EnvironmentBase *env, omrsig_handler_fn handler, void* handler_arg, UDATA defaultOSStackSize)
 {
-	MM_Scheduler *scheduler = (MM_Scheduler *)env->getForge()->allocate(sizeof(MM_Scheduler), MM_AllocationCategory::FIXED, J9_GET_CALLSITE());
+	MM_Scheduler *scheduler = (MM_Scheduler *)env->getForge()->allocate(sizeof(MM_Scheduler), MM_AllocationCategory::FIXED, OMR_GET_CALLSITE());
 	if (scheduler) {
 		new(scheduler) MM_Scheduler(env, handler, handler_arg, defaultOSStackSize);
 		if (!scheduler->initialize(env)) {
@@ -112,53 +97,53 @@ MM_Scheduler::tearDown(MM_EnvironmentBase *env)
 UDATA
 MM_Scheduler::getParameter(UDATA which, char *keyBuffer, I_32 keyBufferSize, char *valueBuffer, I_32 valueBufferSize)
 {
-	PORT_ACCESS_FROM_JAVAVM(_vm);
+	OMRPORT_ACCESS_FROM_OMRVM(_vm);
 	switch (which) {
-		case 0:	j9str_printf(PORTLIB, keyBuffer, keyBufferSize, "Verbose Level");
-			j9str_printf(PORTLIB, valueBuffer, valueBufferSize, "%d", verbose());
+		case 0:	omrstr_printf(keyBuffer, keyBufferSize, "Verbose Level");
+			omrstr_printf(valueBuffer, valueBufferSize, "%d", verbose());
 			return 1;
 		case 1:
 		{
-			j9str_printf(PORTLIB, keyBuffer, keyBufferSize, "Scheduling Method");
-			I_32 len = (I_32)j9str_printf(PORTLIB, valueBuffer, valueBufferSize, "TIME_BASED with ");
+			omrstr_printf(keyBuffer, keyBufferSize, "Scheduling Method");
+			I_32 len = (I_32)omrstr_printf(valueBuffer, valueBufferSize, "TIME_BASED with ");
 			while (_alarmThread == NULL || _alarmThread->_alarm == NULL) {
 				/* Wait for GC to finish initializing */
 				omrthread_sleep(100);
 			}
-			_alarmThread->_alarm->describe(PORTLIB, &valueBuffer[len], valueBufferSize - len);
+			_alarmThread->_alarm->describe(OMRPORTLIB, &valueBuffer[len], valueBufferSize - len);
 			return 1;
 		}
 		case 2:
-			j9str_printf(PORTLIB, keyBuffer, keyBufferSize, "Time Window");
-			j9str_printf(PORTLIB, valueBuffer, valueBufferSize, "%6.2f ms", window * 1.0e3);
+			omrstr_printf(keyBuffer, keyBufferSize, "Time Window");
+			omrstr_printf(valueBuffer, valueBufferSize, "%6.2f ms", window * 1.0e3);
 			return 1;
 		case 3:
-			j9str_printf(PORTLIB, keyBuffer, keyBufferSize, "Target Utilization");
-			j9str_printf(PORTLIB, valueBuffer, valueBufferSize, "%4.1f%%", _utilTracker->getTargetUtilization() * 1.0e2);
+			omrstr_printf(keyBuffer, keyBufferSize, "Target Utilization");
+			omrstr_printf(valueBuffer, valueBufferSize, "%4.1f%%", _utilTracker->getTargetUtilization() * 1.0e2);
 			return 1;
 		case 4:
-			j9str_printf(PORTLIB, keyBuffer, keyBufferSize, "Beat Size");
-			j9str_printf(PORTLIB, valueBuffer, valueBufferSize, "%4.2f ms", beat * 1.0e3);
+			omrstr_printf(keyBuffer, keyBufferSize, "Beat Size");
+			omrstr_printf(valueBuffer, valueBufferSize, "%4.2f ms", beat * 1.0e3);
 			return 1;
 		case 5:
-			j9str_printf(PORTLIB, keyBuffer, keyBufferSize, "Heap Size");
-			j9str_printf(PORTLIB, valueBuffer, valueBufferSize, "%6.2f MB",  ((double)(_extensions->memoryMax)) / (1 << 20));
+			omrstr_printf(keyBuffer, keyBufferSize, "Heap Size");
+			omrstr_printf(valueBuffer, valueBufferSize, "%6.2f MB",  ((double)(_extensions->memoryMax)) / (1 << 20));
 			return 1;
 		case 6:
-			j9str_printf(PORTLIB, keyBuffer, keyBufferSize, "GC Trigger");
-			j9str_printf(PORTLIB, valueBuffer, valueBufferSize, "%6.2f MB",  _extensions->gcTrigger / (double) (1<<20));
+			omrstr_printf(keyBuffer, keyBufferSize, "GC Trigger");
+			omrstr_printf(valueBuffer, valueBufferSize, "%6.2f MB",  _extensions->gcTrigger / (double) (1<<20));
 			return 1;
 		case 7:
-			j9str_printf(PORTLIB, keyBuffer, keyBufferSize, "Headroom");
-			j9str_printf(PORTLIB, valueBuffer, valueBufferSize, "%5.2f MB",  _extensions->headRoom / (double) (1<<20));
+			omrstr_printf(keyBuffer, keyBufferSize, "Headroom");
+			omrstr_printf(valueBuffer, valueBufferSize, "%5.2f MB",  _extensions->headRoom / (double) (1<<20));
 			return 1;
 		case 8:
-			j9str_printf(PORTLIB, keyBuffer, keyBufferSize, "Number of GC Threads");
-			j9str_printf(PORTLIB, valueBuffer, valueBufferSize, "%d", _extensions->gcThreadCount);
+			omrstr_printf(keyBuffer, keyBufferSize, "Number of GC Threads");
+			omrstr_printf(valueBuffer, valueBufferSize, "%d", _extensions->gcThreadCount);
 			return 1;
 		case 9:
-			j9str_printf(PORTLIB, keyBuffer, keyBufferSize, "Regionsize");
-			j9str_printf(PORTLIB, valueBuffer, valueBufferSize, "%d", _extensions->regionSize);
+			omrstr_printf(keyBuffer, keyBufferSize, "Regionsize");
+			omrstr_printf(valueBuffer, valueBufferSize, "%d", _extensions->regionSize);
 			return 1;
 	}
 	return 0;
@@ -167,19 +152,19 @@ MM_Scheduler::getParameter(UDATA which, char *keyBuffer, I_32 keyBufferSize, cha
 void 
 MM_Scheduler::showParameters(MM_EnvironmentBase *env)
 {
-	PORT_ACCESS_FROM_ENVIRONMENT(env);
-	j9tty_printf(PORTLIB, "****************************************************************************\n");
+	OMRPORT_ACCESS_FROM_ENVIRONMENT(env);
+	omrtty_printf("****************************************************************************\n");
 	for (UDATA which=0; ; which++) {
 		char keyBuffer[256], valBuffer[256];
 		UDATA rc = getParameter(which, keyBuffer, sizeof(keyBuffer), valBuffer, sizeof(valBuffer));
 		if (rc == 0) { break; }
-		if (rc == 1) { j9tty_printf(PORTLIB, "%s: %s\n", keyBuffer, valBuffer); }
+		if (rc == 1) { omrtty_printf("%s: %s\n", keyBuffer, valBuffer); }
 	}
-	j9tty_printf(PORTLIB, "****************************************************************************\n");
+	omrtty_printf("****************************************************************************\n");
 }
 
 void 
-MM_Scheduler::initializeForVirtualSTW(MM_GCExtensions *ext) 
+MM_Scheduler::initializeForVirtualSTW(MM_GCExtensionsBase *ext) 
 {
 	ext->gcInitialTrigger = (UDATA) - 1;
  	ext->gcTrigger = ext->gcInitialTrigger;
@@ -210,7 +195,7 @@ MM_Scheduler::initialize(MM_EnvironmentBase *env)
 
 	
 	/* Set up the table used for keeping track of which threads were resumed from suspended */
-	_threadResumedTable = (bool*)env->getForge()->allocate(_threadCountMaximum * sizeof(bool), MM_AllocationCategory::FIXED, J9_GET_CALLSITE());
+	_threadResumedTable = (bool*)env->getForge()->allocate(_threadCountMaximum * sizeof(bool), MM_AllocationCategory::FIXED, OMR_GET_CALLSITE());
 	if (NULL == _threadResumedTable) {
 		goto error_no_memory;
 	}
@@ -252,16 +237,16 @@ MM_Scheduler::checkStartGC(MM_EnvironmentRealtime *env)
 void
 MM_Scheduler::startGC(MM_EnvironmentBase *env)
 {
-	PORT_ACCESS_FROM_ENVIRONMENT(env);
+	OMRPORT_ACCESS_FROM_ENVIRONMENT(env);
 	if (verbose() >= 3) {
-		j9tty_printf(PORTLIB, "GC request: %d Mb in use\n", _gc->_memoryPool->getBytesInUse() >> 20);
+		omrtty_printf("GC request: %d Mb in use\n", _gc->_memoryPool->getBytesInUse() >> 20);
 	}
 
 	if (METRONOME_GC_OFF == MM_AtomicOperations::lockCompareExchangeU32(&_gcOn, METRONOME_GC_OFF, METRONOME_GC_ON)) {
 		if (_gc->isPreviousCycleBelowTrigger()) {
 			_gc->setPreviousCycleBelowTrigger(false);
 			TRIGGER_J9HOOK_MM_PRIVATE_METRONOME_TRIGGER_START(_extensions->privateHookInterface,
-				env->getOmrVMThread(), j9time_hires_clock(),
+				env->getOmrVMThread(), omrtime_hires_clock(),
 				J9HOOK_MM_PRIVATE_METRONOME_TRIGGER_START
 			);
 		}
@@ -283,11 +268,10 @@ MM_Scheduler::isGCOn()
 }
 
 bool
-MM_Scheduler::continueGC(MM_EnvironmentRealtime *env, GCReason reason, UDATA resonParameter, J9VMThread *thr, bool doRequestExclusiveVMAccess)
+MM_Scheduler::continueGC(MM_EnvironmentRealtime *env, GCReason reason, UDATA resonParameter, OMR_VMThread *thr, bool doRequestExclusiveVMAccess)
 {
-	UDATA gcPriority;
+	UDATA gcPriority = 0;
 	bool didGC = true;
-	J9VMThread *vmThread = NULL;
 	
 	assert1(isInitialized());
 	if (!isGCOn()) {
@@ -295,9 +279,8 @@ MM_Scheduler::continueGC(MM_EnvironmentRealtime *env, GCReason reason, UDATA res
 	}
 
 	if (_extensions->trackMutatorThreadCategory) {
-		vmThread = (J9VMThread *)env->getOmrVMThread()->_language_vmthread;
 		/* This thread is doing GC work, account for the time spent into the GC bucket */
-		omrthread_set_category(vmThread->osThread, J9THREAD_CATEGORY_SYSTEM_GC_THREAD, J9THREAD_TYPE_SET_GC);
+		omrthread_set_category(omrthread_self(), J9THREAD_CATEGORY_SYSTEM_GC_THREAD, J9THREAD_TYPE_SET_GC);
 	}
 
 	_barrierSynchronization->preRequestExclusiveVMAccess(thr);
@@ -391,7 +374,7 @@ MM_Scheduler::continueGC(MM_EnvironmentRealtime *env, GCReason reason, UDATA res
 exit:
 	if (_extensions->trackMutatorThreadCategory) {
 		/* Done doing GC, reset the category back to the old one */
-		omrthread_set_category(vmThread->osThread, 0, J9THREAD_TYPE_SET_GC);
+		omrthread_set_category(omrthread_self(), 0, J9THREAD_TYPE_SET_GC);
 	}
 
 	omrthread_monitor_exit(_masterThreadMonitor);
@@ -413,10 +396,10 @@ void
 MM_Scheduler::waitForMutatorsToStop(MM_EnvironmentRealtime *env)
 {
 	/* assumption: only master enters this */
-	PORT_ACCESS_FROM_ENVIRONMENT(env);	
+	OMRPORT_ACCESS_FROM_ENVIRONMENT(env);	
 
 	/* we need to record how long it took to wait for the mutators to stop */
-	U_64 exclusiveAccessTime = j9time_hires_clock();
+	U_64 exclusiveAccessTime = omrtime_hires_clock();
 	
 	/* The time before acquiring exclusive VM access is charged to the mutator but the time
      * during the acquisition is conservatively charged entirely to the GC. */
@@ -444,7 +427,7 @@ MM_Scheduler::waitForMutatorsToStop(MM_EnvironmentRealtime *env)
 		
 	_mode = RUNNING_GC;
 	
-	_extensions->globalGCStats.metronomeStats._microsToStopMutators = j9time_hires_delta(exclusiveAccessTime, j9time_hires_clock(), J9PORT_TIME_DELTA_IN_MICROSECONDS);
+	_extensions->globalGCStats.metronomeStats._microsToStopMutators = omrtime_hires_delta(exclusiveAccessTime, omrtime_hires_clock(), OMRPORT_TIME_DELTA_IN_MICROSECONDS);
 }
 
 void
@@ -504,7 +487,7 @@ MM_Scheduler::shouldMutatorDoubleBeat(MM_EnvironmentRealtime *env, MM_Timer *tim
 void
 MM_Scheduler::reportStartGCIncrement(MM_EnvironmentRealtime *env)
 {
-	PORT_ACCESS_FROM_ENVIRONMENT(env);	
+	OMRPORT_ACCESS_FROM_ENVIRONMENT(env);	
 
 	if(_completeCurrentGCSynchronously) {
 		_completeCurrentGCSynchronouslyMasterThreadCopy = true;
@@ -520,8 +503,8 @@ MM_Scheduler::reportStartGCIncrement(MM_EnvironmentRealtime *env)
 			(_extensions-> largeObjectArea ? _extensions->heap->getActiveLOAMemorySize(MEMORY_TYPE_OLD) : 0 )
 		);
 	
-		exclusiveAccessTimeMicros = j9time_hires_delta(0, env->getExclusiveAccessTime(), J9PORT_TIME_DELTA_IN_MICROSECONDS);
-		meanExclusiveAccessIdleTimeMicros = j9time_hires_delta(0, env->getMeanExclusiveAccessIdleTime(), J9PORT_TIME_DELTA_IN_MICROSECONDS);
+		exclusiveAccessTimeMicros = omrtime_hires_delta(0, env->getExclusiveAccessTime(), OMRPORT_TIME_DELTA_IN_MICROSECONDS);
+		meanExclusiveAccessIdleTimeMicros = omrtime_hires_delta(0, env->getMeanExclusiveAccessIdleTime(), OMRPORT_TIME_DELTA_IN_MICROSECONDS);
 		Trc_MM_ExclusiveAccess(env->getLanguageVMThread(),
 			(U_32)(exclusiveAccessTimeMicros / 1000),
 			(U_32)(exclusiveAccessTimeMicros % 1000),
@@ -539,7 +522,7 @@ MM_Scheduler::reportStartGCIncrement(MM_EnvironmentRealtime *env)
 	 *  since no Java code is supposed to run between those two events */
 	_extensions->globalGCStats.metronomeStats.clearStart();		 
 	_gc->reportGCStart(env);
-	TRIGGER_J9HOOK_MM_PRIVATE_METRONOME_INCREMENT_START(_extensions->privateHookInterface, env->getOmrVMThread(), j9time_hires_clock(), J9HOOK_MM_PRIVATE_METRONOME_INCREMENT_START, _extensions->globalGCStats.metronomeStats._microsToStopMutators);
+	TRIGGER_J9HOOK_MM_PRIVATE_METRONOME_INCREMENT_START(_extensions->privateHookInterface, env->getOmrVMThread(), omrtime_hires_clock(), J9HOOK_MM_PRIVATE_METRONOME_INCREMENT_START, _extensions->globalGCStats.metronomeStats._microsToStopMutators);
 
 	_currentConsecutiveBeats = 1;
 	startGCTime(env, false);
@@ -550,8 +533,6 @@ MM_Scheduler::reportStartGCIncrement(MM_EnvironmentRealtime *env)
 void
 MM_Scheduler::reportStopGCIncrement(MM_EnvironmentRealtime *env, bool isCycleEnd)
 {
-	PORT_ACCESS_FROM_ENVIRONMENT(env);
-	
 	/* assumption: only master enters this */
 
 	stopGCTime(env);
@@ -581,24 +562,7 @@ MM_Scheduler::reportStopGCIncrement(MM_EnvironmentRealtime *env, bool isCycleEnd
 		}
 	}
 
-	TRIGGER_J9HOOK_MM_PRIVATE_METRONOME_INCREMENT_END(_extensions->privateHookInterface, env->getOmrVMThread(), j9time_hires_clock(), J9HOOK_MM_PRIVATE_METRONOME_INCREMENT_END,
-		_extensions->heap->getApproximateActiveFreeMemorySize(),
-		0,
-		_extensions->globalGCStats.metronomeStats.classLoaderUnloadedCount,
-		_extensions->globalGCStats.metronomeStats.classesUnloadedCount,
-		_extensions->globalGCStats.metronomeStats.anonymousClassesUnloadedCount,
-		_extensions->globalGCStats.metronomeStats.nonDeterministicSweepCount,
-		_extensions->globalGCStats.metronomeStats.nonDeterministicSweepConsecutive,
-		_extensions->globalGCStats.metronomeStats.nonDeterministicSweepDelay,
-		_extensions->markJavaStats._weakReferenceStats._cleared,
-		_extensions->markJavaStats._softReferenceStats._cleared,
-		_extensions->getMaxSoftReferenceAge(),
-		_extensions->getDynamicMaxSoftReferenceAge(),
-		_extensions->markJavaStats._phantomReferenceStats._cleared,
-		_extensions->markJavaStats._unfinalizedEnqueued,
-		_extensions->globalGCStats.metronomeStats.getWorkPacketOverflowCount(),
-		_extensions->globalGCStats.metronomeStats.getObjectOverflowCount()
-	);
+	_delegate.reportStopGCIncrement(env);
 	
 	/* GC start/end are reported at each GC increment,
 	 *  not at the beginning/end of a GC cycle,
@@ -777,11 +741,11 @@ MM_Scheduler::completeTask(MM_EnvironmentBase *env)
 bool
 MM_Scheduler::startUpThreads()
 {
-	PORT_ACCESS_FROM_JAVAVM(_vm);
+	OMRPORT_ACCESS_FROM_OMRVM(_vm);
 	MM_EnvironmentRealtime env(_vm);
 
 	if (_extensions->gcThreadCount > _osInterface->getNumbersOfProcessors()) {
-		j9tty_printf(PORTLIB, "Please specify fewer GC threads than the number of physical processors.\n");
+		omrtty_printf("Please specify fewer GC threads than the number of physical processors.\n");
 		return false;
 	}
 
@@ -801,8 +765,8 @@ MM_Scheduler::startUpThreads()
 	/* Now that the GC threads are started, it is safe to start the alarm thread */
 	_alarmThread = MM_MetronomeAlarmThread::newInstance(&env);
 	if (_alarmThread == NULL) {
-		j9tty_printf(PORTLIB, "Unable to initialize alarm thread for time-based GC scheduling\n");
-		j9tty_printf(PORTLIB, "Most likely cause is non-supported version of OS\n");
+		omrtty_printf("Unable to initialize alarm thread for time-based GC scheduling\n");
+		omrtty_printf("Most likely cause is non-supported version of OS\n");
 		return false;
 	}
 	
@@ -917,15 +881,15 @@ MM_Scheduler::masterEntryPoint(MM_EnvironmentBase *envModron)
 void
 MM_Scheduler::completeCurrentGCSynchronously(MM_EnvironmentRealtime *env)
 {
-	omrthread_monitor_enter(_vm->omrVM->_gcCycleOnMonitor);	
-	if (_vm->omrVM->_gcCycleOn || isGCOn()) {
+	omrthread_monitor_enter(_vm->_gcCycleOnMonitor);	
+	if (_vm->_gcCycleOn || isGCOn()) {
 		_completeCurrentGCSynchronously = true;
 		_completeCurrentGCSynchronouslyReason = VM_SHUTDOWN;
 		
 		/* wait till get notified by master that the cycle is finished */
-		omrthread_monitor_wait(_vm->omrVM->_gcCycleOnMonitor);	
+		omrthread_monitor_wait(_vm->_gcCycleOnMonitor);	
 	}	
-	omrthread_monitor_exit(_vm->omrVM->_gcCycleOnMonitor);	
+	omrthread_monitor_exit(_vm->_gcCycleOnMonitor);
 }
 
 /**
@@ -979,7 +943,7 @@ MM_Scheduler::shutDownThreads()
 	/* Don't kill the alarm thread until after the GC slave threads, since it may
 	 * be needed to drive a final synchronous GC */
 	if (_alarmThread) {
-		MM_EnvironmentBase env(_vm->omrVM);
+		MM_EnvironmentBase env(_vm);
 		_alarmThread->kill(&env);
 		_alarmThread = NULL;
 	}
@@ -1072,7 +1036,7 @@ MM_Scheduler::startGCIfTimeExpired(MM_EnvironmentBase *envModron)
 {
 	MM_EnvironmentRealtime *env = MM_EnvironmentRealtime::getEnvironment(envModron);
 	if (isInitialized() && isGCOn() && env->getTimer()->hasTimeElapsed(getStartTimeOfCurrentMutatorSlice(), beatNanos)) {
-		continueGC(env, TIME_TRIGGER, 0, (J9VMThread *)env->getLanguageVMThread(), true);
+		continueGC(env, TIME_TRIGGER, 0, env->getOmrVMThread(), true);
 	}
 }
 
@@ -1085,11 +1049,11 @@ MM_Scheduler::incrementMutatorCount()
 extern "C" {
 
 void
-j9gc_startGCIfTimeExpired(J9VMThread* vmThread)
+j9gc_startGCIfTimeExpired(OMR_VMThread* vmThread)
 {
 	MM_EnvironmentRealtime *env = MM_EnvironmentRealtime::getEnvironment(vmThread);
-	MM_Scheduler *scheduler = (MM_Scheduler *)MM_GCExtensions::getExtensions(env)->dispatcher;
+	MM_Scheduler *scheduler = (MM_Scheduler *)env->getExtensions()->dispatcher;
 	scheduler->startGCIfTimeExpired(env);
 }
-	
+
 }

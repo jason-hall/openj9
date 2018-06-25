@@ -235,17 +235,19 @@ MM_EnvironmentDelegate::assumeExclusiveVMAccess(uintptr_t exclusiveCount)
 void
 MM_EnvironmentDelegate::releaseCriticalHeapAccess(uintptr_t *data)
 {
-        J9VMThread *vmThread = (J9VMThread *)_env->getOmrVMThread()->_language_vmthread;
-        VM_VMAccess::setPublicFlags(vmThread, J9_PUBLIC_FLAGS_NOT_AT_SAFE_POINT);
-        MM_JNICriticalRegion::releaseAccess(vmThread, data);
+	OMR_VMThread *omrVMThread = _env->getOmrVMThread();
+	J9VMThread *vmThread = (J9VMThread *)omrVMThread->_language_vmthread;
+	VM_VMAccess::setPublicFlags(vmThread, J9_PUBLIC_FLAGS_NOT_AT_SAFE_POINT);
+	MM_JNICriticalRegion::releaseAccess(omrVMThread, data);
 }
 
 void
 MM_EnvironmentDelegate::reacquireCriticalHeapAccess(uintptr_t data)
 {
-        J9VMThread *vmThread = (J9VMThread *)_env->getOmrVMThread()->_language_vmthread;
-        MM_JNICriticalRegion::reacquireAccess(vmThread, data);
-        VM_VMAccess::clearPublicFlags(vmThread, J9_PUBLIC_FLAGS_NOT_AT_SAFE_POINT);
+	OMR_VMThread *omrVMThread = _env->getOmrVMThread();
+	J9VMThread *vmThread = (J9VMThread *)omrVMThread->_language_vmthread;
+	MM_JNICriticalRegion::reacquireAccess(omrVMThread, data);
+	VM_VMAccess::clearPublicFlags(vmThread, J9_PUBLIC_FLAGS_NOT_AT_SAFE_POINT);
 }
 
 #if defined(OMR_GC_CONCURRENT_SCAVENGER)

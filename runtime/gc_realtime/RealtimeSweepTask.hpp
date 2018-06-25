@@ -24,10 +24,6 @@
 #if !defined(REALTIMESWEEPTASK_HPP_)
 #define REALTIMESWEEPTASK_HPP_
 
-#include "j9.h"
-#include "j9cfg.h"
-#include "j9modron.h"
-
 #include "IncrementalParallelTask.hpp"
 
 class MM_Dispatcher;

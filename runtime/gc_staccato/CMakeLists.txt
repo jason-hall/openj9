@@ -21,11 +21,7 @@
 ################################################################################
 
 add_library(j9staccato STATIC
-	ConfigurationStaccato.cpp
-	EnvironmentStaccato.cpp
 	StaccatoAccessBarrier.cpp
-	StaccatoGC.cpp
-
 )
 
 target_include_directories(j9staccato
