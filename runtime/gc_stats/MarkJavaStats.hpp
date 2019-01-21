@@ -40,6 +40,12 @@ class MM_MarkJavaStats : public MM_Base {
 private:
 protected:
 public:
+	UDATA _classLoaderUnloadedCount;
+	UDATA _classesUnloadedCount;
+	UDATA _anonymousClassesUnloadedCount;
+
+	UDATA _finalizableCount; /**< count of objects pushed for finalization during one quantum */
+
 	UDATA _unfinalizedCandidates; /**< unfinalized objects that are candidates to be finalized visited this cycle */
 	UDATA _unfinalizedEnqueued; /**< unfinalized objects that are enqueued during this cycle (MUST be less than or equal _unfinalizedCandidates) */
 
@@ -67,6 +73,10 @@ public:
 
 	MM_MarkJavaStats() :
 		MM_Base()
+		, _classLoaderUnloadedCount(0)
+		, _classesUnloadedCount(0)
+		, _anonymousClassesUnloadedCount(0)
+		, _finalizableCount(0)
 		, _unfinalizedCandidates(0)
 		, _unfinalizedEnqueued(0)
 		, _ownableSynchronizerCandidates(0)
