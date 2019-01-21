@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 1991, 2018 IBM Corp. and others
+ * Copyright (c) 1991, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -584,9 +584,9 @@ MM_Scheduler::reportStopGCIncrement(MM_EnvironmentRealtime *env, bool isCycleEnd
 	TRIGGER_J9HOOK_MM_PRIVATE_METRONOME_INCREMENT_END(_extensions->privateHookInterface, env->getOmrVMThread(), j9time_hires_clock(), J9HOOK_MM_PRIVATE_METRONOME_INCREMENT_END,
 		_extensions->heap->getApproximateActiveFreeMemorySize(),
 		0,
-		_extensions->globalGCStats.metronomeStats.classLoaderUnloadedCount,
-		_extensions->globalGCStats.metronomeStats.classesUnloadedCount,
-		_extensions->globalGCStats.metronomeStats.anonymousClassesUnloadedCount,
+		_extensions->markJavaStats._classLoaderUnloadedCount,
+		_extensions->markJavaStats._classesUnloadedCount,
+		_extensions->markJavaStats._anonymousClassesUnloadedCount,
 		_extensions->globalGCStats.metronomeStats.nonDeterministicSweepCount,
 		_extensions->globalGCStats.metronomeStats.nonDeterministicSweepConsecutive,
 		_extensions->globalGCStats.metronomeStats.nonDeterministicSweepDelay,

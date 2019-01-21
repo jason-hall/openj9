@@ -1,6 +1,6 @@
 
 /*******************************************************************************
- * Copyright (c) 1991, 2017 IBM Corp. and others
+ * Copyright (c) 1991, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -40,6 +40,12 @@ class MM_MarkJavaStats : public MM_Base {
 private:
 protected:
 public:
+	UDATA classLoaderUnloadedCount;
+	UDATA classesUnloadedCount;
+	UDATA anonymousClassesUnloadedCount;
+
+	UDATA finalizableCount; /**< count of objects pushed for finalization during one quantum */
+
 	UDATA _unfinalizedCandidates; /**< unfinalized objects that are candidates to be finalized visited this cycle */
 	UDATA _unfinalizedEnqueued; /**< unfinalized objects that are enqueued during this cycle (MUST be less than or equal _unfinalizedCandidates) */
 
@@ -67,6 +73,9 @@ public:
 
 	MM_MarkJavaStats() :
 		MM_Base()
+		, _classLoaderUnloadedCount(0)
+		, _classesUnloadedCount(0)
+		, _anonymousClassesUnloadedCount(0)
 		, _unfinalizedCandidates(0)
 		, _unfinalizedEnqueued(0)
 		, _ownableSynchronizerCandidates(0)

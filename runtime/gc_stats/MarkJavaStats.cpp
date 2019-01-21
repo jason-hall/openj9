@@ -1,6 +1,6 @@
 
 /*******************************************************************************
- * Copyright (c) 1991, 2014 IBM Corp. and others
+ * Copyright (c) 1991, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -29,6 +29,11 @@
 void
 MM_MarkJavaStats::clear()
 {
+	_classLoaderUnloadedCount = 0;
+	_classesUnloadedCount = 0;
+	_anonymousClassesUnloadedCount = 0;
+	_finalizableCount = 0;
+
 	_unfinalizedCandidates = 0;
 	_unfinalizedEnqueued = 0;
 
@@ -51,6 +56,11 @@ MM_MarkJavaStats::clear()
 void
 MM_MarkJavaStats::merge(MM_MarkJavaStats* statsToMerge)
 {
+	_classLoaderUnloadedCount += statsToMerge->_classLoaderUnloadedCount;
+	_classesUnloadedCount += statsToMerge->_classesUnloadedCount;
+	_anonymousClassesUnloadedCount += statsToMerge->_anonymousClassesUnloadedCount;
+	_finalizableCount += statsToMerge->_finalizableCount;
+
 	_unfinalizedCandidates += statsToMerge->_unfinalizedCandidates;
 	_unfinalizedEnqueued += statsToMerge->_unfinalizedEnqueued;
 

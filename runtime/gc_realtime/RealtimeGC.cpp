@@ -1,6 +1,6 @@
 
 /*******************************************************************************
- * Copyright (c) 1991, 2018 IBM Corp. and others
+ * Copyright (c) 1991, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -583,9 +583,9 @@ MM_RealtimeGC::updateClassUnloadStats(MM_EnvironmentBase *env, UDATA classUnload
 	classUnloadStats->_classLoaderUnloadedCount = classLoaderUnloadCount;
 
 	/* Record increment stats */
-	_extensions->globalGCStats.metronomeStats.classesUnloadedCount = classUnloadCount;
-	_extensions->globalGCStats.metronomeStats.anonymousClassesUnloadedCount = anonymousClassUnloadCount;
-	_extensions->globalGCStats.metronomeStats.classLoaderUnloadedCount = classLoaderUnloadCount;
+	_extensions->markJavaStats._classesUnloadedCount = classUnloadCount;
+	_extensions->markJavaStats._anonymousClassesUnloadedCount = anonymousClassUnloadCount;
+	_extensions->markJavaStats._classLoaderUnloadedCount = classLoaderUnloadCount;
 }
 
 /**
