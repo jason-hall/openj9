@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 1991, 2018 IBM Corp. and others
+ * Copyright (c) 1991, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -606,7 +606,7 @@ MM_RealtimeAccessBarrier::checkClassLive(J9JavaVM *javaVM, J9Class *classPtr)
 		J9Object *classLoaderObject = classLoader->classLoaderObject;
 
 		if (NULL != classLoaderObject) {
-			if (realtimeGC->_unmarkedImpliesClasses) {
+			if (realtimeGC->getRealtimeDelegate()->_unmarkedImpliesClasses) {
 				/*
 				 * Mark is complete but GC cycle is still be in progress
 				 * so we just can check is the correspondent class loader object marked
