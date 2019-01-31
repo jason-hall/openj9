@@ -263,7 +263,7 @@ void MM_RTCAlarm::describe(OMRPortLibrary* port, char *buffer, I_32 bufferSize) 
 
 void MM_HRTAlarm::describe(OMRPortLibrary* port, char *buffer, I_32 bufferSize) {
 	OMRPORT_ACCESS_FROM_OMRPORT(port);
-	 omrstr_printf(buffer, bufferSize, "High Resolution Timer (Period = %d us)", _extensions->hrtPeriodMicro);
+	omrstr_printf(buffer, bufferSize, "High Resolution Timer (Period = %d us)", _extensions->hrtPeriodMicro);
 }
 
 void MM_ITAlarm::describe(OMRPortLibrary* port, char *buffer, I_32 bufferSize) {

@@ -36,6 +36,7 @@
 #include "GCExtensionsBase.hpp"
 #include "Metronome.hpp"
 #include "ParallelDispatcher.hpp"
+#include "RealtimeSchedulerDelegate.hpp"
 #include "YieldCollaborator.hpp"
 
 class MM_OSInterface;
