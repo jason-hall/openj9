@@ -1,6 +1,5 @@
-
 /*******************************************************************************
- * Copyright (c) 1991, 2017 IBM Corp. and others
+ * Copyright (c) 1991, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -26,8 +25,7 @@
  * @ingroup GC_Modron_Metronome
  */
 
-#include "j9.h"
-#include "j9cfg.h"
+#include "omrcfg.h"
 
 #include "ConfigurationStaccato.hpp"
 #include "EnvironmentBase.hpp"
@@ -40,7 +38,7 @@ MM_ConfigurationStaccato::newInstance(MM_EnvironmentBase *env)
 {
 	MM_ConfigurationStaccato *configuration;
 	
-	configuration = (MM_ConfigurationStaccato *) env->getForge()->allocate(sizeof(MM_ConfigurationStaccato), MM_AllocationCategory::FIXED, J9_GET_CALLSITE());
+	configuration = (MM_ConfigurationStaccato *) env->getForge()->allocate(sizeof(MM_ConfigurationStaccato), MM_AllocationCategory::FIXED, OMR_GET_CALLSITE());
 	if(NULL != configuration) {
 		new(configuration) MM_ConfigurationStaccato(env);
 		if(!configuration->initialize(env)) {

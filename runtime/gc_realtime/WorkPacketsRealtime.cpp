@@ -1,6 +1,5 @@
-
 /*******************************************************************************
- * Copyright (c) 1991, 2018 IBM Corp. and others
+ * Copyright (c) 1991, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -22,18 +21,13 @@
  *******************************************************************************/
 
 
-#include "j9.h"
-#include "j9protos.h"
-#include "j9port.h"
 #include "omrthread.h"
 
-#include "Debug.hpp"
-#include "EnvironmentRealtime.hpp"
-#include "GCExtensions.hpp"
+#include "GCExtensionsBase.hpp"
 #include "IncrementalOverflow.hpp"
 #include "IncrementalParallelTask.hpp"
-#include "RememberedSetSATB.hpp"
 #include "RealtimeGC.hpp"
+
 #include "WorkPacketsRealtime.hpp"
 
 /**
@@ -46,7 +40,7 @@ MM_WorkPacketsRealtime::newInstance(MM_EnvironmentBase *env)
 {
 	MM_WorkPacketsRealtime *workPackets;
 	
-	workPackets = (MM_WorkPacketsRealtime *)env->getForge()->allocate(sizeof(MM_WorkPacketsRealtime), MM_AllocationCategory::WORK_PACKETS, J9_GET_CALLSITE());
+	workPackets = (MM_WorkPacketsRealtime *)env->getForge()->allocate(sizeof(MM_WorkPacketsRealtime), MM_AllocationCategory::WORK_PACKETS, OMR_GET_CALLSITE());
 	if (workPackets) {
 		new(workPackets) MM_WorkPacketsRealtime(env);
 		if (!workPackets->initialize(env)) {
@@ -69,11 +63,11 @@ MM_WorkPacketsRealtime::initialize(MM_EnvironmentBase *env)
 		return false;
 	}
 
-	if (0 == MM_GCExtensions::getExtensions(_extensions)->overflowCacheCount) {
+	if (0 == _extensions->overflowCacheCount) {
 		/* If the user has not specified a value for overflowCacheCount
 		 * set it to be 5% of the packet slot count.
 		 */
-		MM_GCExtensions::getExtensions(_extensions)->overflowCacheCount = (UDATA)(_slotsInPacket * 0.05);
+		_extensions->overflowCacheCount = (uintptr_t)(_slotsInPacket * 0.05);
 	}
 		
 	return true;
@@ -107,7 +101,7 @@ MM_WorkPacketsRealtime::getInputPacket(MM_EnvironmentBase *env)
 {
 	MM_Packet *packet = NULL;
 	bool doneFlag = false;
-	volatile UDATA doneIndex = _inputListDoneIndex;
+	volatile uintptr_t doneIndex = _inputListDoneIndex;
 
 	while(!doneFlag) {
 		while(inputPacketAvailable(env)) {

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 1991, 2019 IBM Corp. and others
+ * Copyright (c) 2019, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -20,49 +20,27 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#if !defined(TIMER_HPP_)
-#define TIMER_HPP_
+#if !defined(REALTIMESCHEDULERDELEGATE_HPP_)
+#define REALTIMESCHEDULERDELEGATE_HPP_
 
-#include "Metronome.hpp"
+#include "j9.h"
+#include "j9cfg.h"
 
-class MM_EnvironmentBase;
-class MM_OSInterface;
+#if defined(J9VM_GC_REALTIME)
 
-class MM_Timer : public MM_BaseVirtual
+#include "omr.h"
+#include "BaseNonVirtual.hpp"
+#include "GCExtensions.hpp"
+
+class MM_EnvironmentRealtime;
+
+class MM_RealtimeSchedulerDelegate : public MM_BaseNonVirtual
 {
-/* Data members & types */
 public:
-protected:
-private:
-	U_64 _tickBase; /**< Current tick count from the TSC */
-	U_64 _sytemTimeBase; /**< Current system time in nanoseconds */
-	MM_OSInterface* _osInterface; /**< OS Interface used to set the time base on reset/initialize. */
-	
-/* Methods */
-public:
-	static MM_Timer* newInstance(MM_EnvironmentBase* env, MM_OSInterface* osInterface);
-	virtual void kill(MM_EnvironmentBase* env);
-	
-	U_64 peekElapsedTime(U_64 base);
-	U_64 getTimeInNanos();
-	U_64 nanoTime();
-	void reset();
-	bool hasTimeElapsed(U_64 startTimeInNanos, U_64 timeToWaitInNanos);
-	
-protected:
-	bool initialize(MM_EnvironmentBase* env, MM_OSInterface* osInterface);
-	void tearDown(MM_EnvironmentBase* env);
-private:
-	U_64 rebaseTime();
-	
-	MM_Timer() :
-		_tickBase(J9CONST64(0)),
-		_sytemTimeBase(J9CONST64(0)),
-		_osInterface(NULL)
-	{
-		_typeId = __FUNCTION__;
-	}
-	
+	static void reportStopGCIncrement(MM_EnvironmentRealtime *env);
 };
 
-#endif /*TIMER_HPP_*/
+#endif /* defined(J9VM_GC_REALTIME) */
+
+#endif /* defined(REALTIMESCHEDULERDELEGATE_HPP_) */	
+

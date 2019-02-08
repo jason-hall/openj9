@@ -1,6 +1,5 @@
-
 /*******************************************************************************
- * Copyright (c) 1991, 2018 IBM Corp. and others
+ * Copyright (c) 1991, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -435,7 +434,7 @@ J9AllocateObject(J9VMThread *vmThread, J9Class *clazz, uintptr_t allocateFlags)
 #if defined(J9VM_GC_REALTIME) 
 		} else if (extensions->isMetronomeGC()) {
 			if (env->saveObjects((omrobjectptr_t)objectPtr)) {
-				j9gc_startGCIfTimeExpired(vmThread);
+				j9gc_startGCIfTimeExpired(vmThread->omrVMThread);
 				env->restoreObjects((omrobjectptr_t*)&objectPtr);
 			}
 #endif /* defined(J9VM_GC_REALTIME) */
@@ -558,7 +557,7 @@ J9AllocateIndexableObject(J9VMThread *vmThread, J9Class *clazz, uint32_t numberO
 #if defined(J9VM_GC_REALTIME)
 		} else if (extensions->isMetronomeGC()) {
 			if (env->saveObjects((omrobjectptr_t)objectPtr)) {
-				j9gc_startGCIfTimeExpired(vmThread);
+				j9gc_startGCIfTimeExpired(vmThread->omrVMThread);
 				env->restoreObjects((omrobjectptr_t*)&objectPtr);
 			}
 #endif /* defined(J9VM_GC_REALTIME) */

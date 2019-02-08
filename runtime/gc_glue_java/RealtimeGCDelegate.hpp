@@ -117,6 +117,10 @@ public:
 	void yieldFromClassUnloading(MM_EnvironmentRealtime *env);
 	void lockClassUnloadMonitor(MM_EnvironmentRealtime *env);
 	void unlockClassUnloadMonitor(MM_EnvironmentRealtime *env);
+
+	static UDATA getUnfinalizedObjectListCount(MM_EnvironmentBase *env) {return MM_GCExtensions::getExtensions(env)->gcThreadCount;}
+	static UDATA getOwnableSynchronizerObjectListCount(MM_EnvironmentBase *env) {return MM_GCExtensions::getExtensions(env)->gcThreadCount;}
+	static UDATA getReferenceObjectListCount(MM_EnvironmentBase *env) {return MM_GCExtensions::getExtensions(env)->gcThreadCount;}
 };
 
 #endif /* defined(J9VM_GC_REALTIME) */

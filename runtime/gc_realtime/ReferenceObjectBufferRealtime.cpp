@@ -1,6 +1,5 @@
-
 /*******************************************************************************
- * Copyright (c) 1991, 2014 IBM Corp. and others
+ * Copyright (c) 1991, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -27,6 +26,7 @@
 
 #include "GCExtensions.hpp"
 #include "HeapRegionDescriptorRealtime.hpp"
+#include "RealtimeGCDelegate.hpp"
 #include "ReferenceObjectBufferRealtime.hpp"
 #include "ReferenceObjectList.hpp"
 
@@ -73,7 +73,7 @@ MM_ReferenceObjectBufferRealtime::flushImpl(MM_EnvironmentBase* env)
 	MM_ReferenceObjectList *referenceObjectList = &extensions->referenceObjectLists[_referenceObjectListIndex];
 	referenceObjectList->addAll(env, _referenceObjectType, _head, _tail);
 	_referenceObjectListIndex += 1;
-	if (MM_HeapRegionDescriptorRealtime::getReferenceObjectListCount(env) == _referenceObjectListIndex) {
+	if (MM_RealtimeGCDelegate::getReferenceObjectListCount(env) == _referenceObjectListIndex) {
 		_referenceObjectListIndex = 0;
 	}
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 1991, 2014 IBM Corp. and others
+ * Copyright (c) 1991, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -23,13 +23,12 @@
 #if !defined(ENVIRONMENTSTACCATO_HPP_)
 #define ENVIRONMENTSTACCATO_HPP_
 
-#include "j9.h"
-#include "j9cfg.h"
+#include "omrcfg.h"
 
 #include "Base.hpp"
 #include "EnvironmentRealtime.hpp"
 
-class MM_GCExtensions;
+class MM_GCExtensionsBase;
 
 class MM_EnvironmentStaccato : public MM_EnvironmentRealtime
 {
@@ -43,7 +42,7 @@ public:
 	static MM_EnvironmentStaccato *newInstance(MM_GCExtensionsBase *extensions, OMR_VMThread *omrVMThread);
 	virtual void kill();
 
-	MMINLINE static MM_EnvironmentStaccato *getEnvironment(J9VMThread *vmThread) { return (MM_EnvironmentStaccato *)vmThread->gcExtensions; }
+	MMINLINE static MM_EnvironmentStaccato *getEnvironment(OMR_VMThread *omrVMThread) { return static_cast<MM_EnvironmentStaccato*>(omrVMThread->_gcOmrVMThreadExtensions); }
 	MMINLINE static MM_EnvironmentStaccato *getEnvironment(MM_EnvironmentRealtime *ptr) { return (MM_EnvironmentStaccato *)ptr; }
 	MMINLINE static MM_EnvironmentStaccato *getEnvironment(MM_EnvironmentBase *ptr) { return (MM_EnvironmentStaccato *)ptr; }	
 

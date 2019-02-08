@@ -29,6 +29,7 @@
 
 #include "HeapRegionDescriptorRealtime.hpp"
 #include "OwnableSynchronizerObjectList.hpp"
+#include "RealtimeGCDelegate.hpp"
 
 MM_OwnableSynchronizerObjectBufferRealtime::MM_OwnableSynchronizerObjectBufferRealtime(MM_GCExtensions *extensions, UDATA maxObjectCount)
 	: MM_OwnableSynchronizerObjectBuffer(extensions, maxObjectCount)
@@ -74,7 +75,7 @@ MM_OwnableSynchronizerObjectBufferRealtime::flushImpl(MM_EnvironmentBase* env)
 	MM_OwnableSynchronizerObjectList *ownableSynchronizerObjectList = &extensions->ownableSynchronizerObjectLists[_ownableSynchronizerObjectListIndex];
 	ownableSynchronizerObjectList->addAll(env, _head, _tail);
 	_ownableSynchronizerObjectListIndex += 1;
-	if (MM_HeapRegionDescriptorRealtime::getOwnableSynchronizerObjectListCount(env) == _ownableSynchronizerObjectListIndex) {
+	if (MM_RealtimeGCDelegate::getOwnableSynchronizerObjectListCount(env) == _ownableSynchronizerObjectListIndex) {
 		_ownableSynchronizerObjectListIndex = 0;
 	}
 }
