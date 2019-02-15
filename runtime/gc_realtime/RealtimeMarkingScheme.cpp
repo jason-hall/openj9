@@ -35,11 +35,17 @@
 #include "MarkMap.hpp"
 #include "ObjectAccessBarrier.hpp"
 #include "ObjectAllocationInterface.hpp"
+#include "OwnableSynchronizerObjectBufferRealtime.hpp"
+#include "OwnableSynchronizerObjectList.hpp"
 #include "RealtimeGC.hpp"
 #include "RealtimeRootScanner.hpp"
 #include "RealtimeMarkingScheme.hpp"
+#include "ReferenceObjectBufferRealtime.hpp"
+#include "ReferenceObjectList.hpp"
 #include "SlotObject.hpp"
 #include "StackSlotValidator.hpp"
+#include "UnfinalizedObjectBufferRealtime.hpp"
+#include "UnfinalizedObjectList.hpp"
 #include "WorkPacketsRealtime.hpp"
 
 /**
@@ -82,7 +88,7 @@ public:
 	virtual void
 	scanOneThreadImpl(MM_EnvironmentRealtime *env, J9VMThread* walkThread, void* localData)
 	{
-		MM_EnvironmentRealtime* walkThreadEnv = MM_EnvironmentRealtime::getEnvironment(walkThread);
+		MM_EnvironmentRealtime* walkThreadEnv = MM_EnvironmentRealtime::getEnvironment(walkThread->omrVMThread);
 		MM_RealtimeGC* realtimeGC = (MM_RealtimeGC*)_realtimeGC;
 		/* Scan the thread by invoking superclass */
 		MM_RootScanner::scanOneThread(env, walkThread, localData);
@@ -95,7 +101,7 @@ public:
 		/*((MM_SegregatedAllocationInterface *)walkThreadEnv->_objectAllocationInterface)->preMarkCache(walkThreadEnv);*/
 		walkThreadEnv->_objectAllocationInterface->flushCache(walkThreadEnv);
 		/* Disable the double barrier on the scanned thread. */
-		realtimeGC->disableDoubleBarrierOnThread(env, walkThread->omrVMThread);
+		realtimeGC->disableDoubleBarrierOnThread(env, walkThread);
 	}
 	
 #if defined(J9VM_GC_FINALIZATION)
@@ -490,7 +496,7 @@ MM_RealtimeMarkingScheme::markRoots(MM_EnvironmentRealtime *env, MM_RealtimeMark
 		/* Setting the permanent class loaders to scanned without a locked operation is safe
 		 * Class loaders will not be rescanned until a thread synchronize is executed
 		 */
-		if(_realtimeGC->getRealtimeDelegate()->isDynamicClassUnloadingEnabled()) {
+		if(_realtimeGC->isDynamicClassUnloadingEnabled()) {
 			((J9ClassLoader *)_javaVM->systemClassLoader)->gcFlags |= J9_GC_CLASS_LOADER_SCANNED;
 			markObject(env, (J9Object *)((J9ClassLoader *)_javaVM->systemClassLoader)->classLoaderObject);
 			if(_javaVM->applicationClassLoader) {
@@ -532,7 +538,7 @@ MM_RealtimeMarkingScheme::markRoots(MM_EnvironmentRealtime *env, MM_RealtimeMark
 		_scheduler->condYieldFromGC(env);
 #endif /* J9VM_GC_FINALIZATION */
 #if defined(J9VM_GC_DYNAMIC_CLASS_UNLOADING) 
-		if (!_realtimeGC->getRealtimeDelegate()->isDynamicClassUnloadingEnabled()) {
+		if (!_realtimeGC->isDynamicClassUnloadingEnabled()) {
 #endif /* J9VM_GC_DYNAMIC_CLASS_UNLOADING */ 
 			/* We are scanning all classes, no need to include stack frame references */
 			rootScanner->setIncludeStackFrameClassReferences(false); 
@@ -595,7 +601,7 @@ MM_RealtimeMarkingScheme::markLiveObjects(MM_EnvironmentRealtime *env)
 	MM_RealtimeMarkingSchemeRootMarker rootMarker(env, _realtimeGC);
 	env->setRootScanner(&rootMarker);
 #if defined(J9VM_GC_DYNAMIC_CLASS_UNLOADING)
-	rootMarker.setClassDataAsRoots(!_realtimeGC->getRealtimeDelegate()->isDynamicClassUnloadingEnabled());
+	rootMarker.setClassDataAsRoots(!_realtimeGC->isDynamicClassUnloadingEnabled());
 #endif /* J9VM_GC_DYNAMIC_CLASS_UNLOADING */
 	markRoots(env, &rootMarker);
 	env->setRootScanner(NULL);
@@ -636,7 +642,7 @@ MM_RealtimeMarkingScheme::markLiveObjects(MM_EnvironmentRealtime *env)
 		
 #if defined(J9VM_GC_DYNAMIC_CLASS_UNLOADING)
 		/* enable to use mark information to detect is class dead */
-		_realtimeGC->getRealtimeDelegate()->_unmarkedImpliesClasses = true;
+		_realtimeGC->_unmarkedImpliesClasses = true;
 #endif /* defined(J9VM_GC_DYNAMIC_CLASS_UNLOADING) */
 
 		/* This is the symmetric call to the enabling of the write barrier that happens at the top of this method. */
@@ -723,7 +729,7 @@ MM_RealtimeMarkingScheme::scanMixedObject(MM_EnvironmentRealtime *env, J9Object 
 #endif /* J9VM_GC_LEAF_BITS */
 	
 #if defined(J9VM_GC_DYNAMIC_CLASS_UNLOADING)
-	if(_realtimeGC->getRealtimeDelegate()->isDynamicClassUnloadingEnabled()) {
+	if(_realtimeGC->isDynamicClassUnloadingEnabled()) {
 		markClassOfObject(env, objectPtr);
 	}
 #endif /* J9VM_GC_DYNAMIC_CLASS_UNLOADING */
@@ -794,7 +800,7 @@ MM_RealtimeMarkingScheme::scanReferenceMixedObject(MM_EnvironmentRealtime *env, 
 #endif /* J9VM_GC_LEAF_BITS */
 	
 #if defined(J9VM_GC_DYNAMIC_CLASS_UNLOADING)
-	if(_realtimeGC->getRealtimeDelegate()->isDynamicClassUnloadingEnabled()) {
+	if(_realtimeGC->isDynamicClassUnloadingEnabled()) {
 		markClassOfObject(env, objectPtr);
 	}
 #endif /* J9VM_GC_DYNAMIC_CLASS_UNLOADING */
@@ -896,7 +902,7 @@ MM_RealtimeMarkingScheme::scanPointerArrayObject(MM_EnvironmentRealtime *env, J9
 	UDATA pointerFields = 0;
 	
 #if defined(J9VM_GC_DYNAMIC_CLASS_UNLOADING)
-	if(_realtimeGC->getRealtimeDelegate()->isDynamicClassUnloadingEnabled()) {
+	if(_realtimeGC->isDynamicClassUnloadingEnabled()) {
 		markClassOfObject(env, (J9Object *)objectPtr);
 	}
 #endif /* J9VM_GC_DYNAMIC_CLASS_UNLOADING */
@@ -1047,7 +1053,7 @@ MM_RealtimeMarkingScheme::scanUnfinalizedObjects(MM_EnvironmentRealtime *env)
 					/* object was not previously marked -- it is now finalizable so push it to the local buffer */
 					buffer.add(env, object);
 					gcEnv->_markJavaStats._unfinalizedEnqueued += 1;
-					_realtimeGC->getRealtimeDelegate()->_finalizationRequired = true;
+					_realtimeGC->_finalizationRequired = true;
 				} else {
 					/* object was already marked. It is still unfinalized */
 					gcEnv->_unfinalizedObjectBuffer->add(env, object);
@@ -1228,7 +1234,7 @@ MM_RealtimeMarkingScheme::processReferenceList(MM_EnvironmentRealtime *env, MM_H
 					buffer.add(env, referenceObj);
 					referenceStats->_enqueued += 1;
 					/* Flag for the finalizer */
-					_realtimeGC->getRealtimeDelegate()->_finalizationRequired = true;
+					_realtimeGC->_finalizationRequired = true;
 				}
 #endif /* J9VM_GC_FINALIZATION */
 			}

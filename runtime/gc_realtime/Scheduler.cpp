@@ -778,7 +778,7 @@ bool
 MM_Scheduler::startUpThreads()
 {
 	PORT_ACCESS_FROM_JAVAVM(_vm);
-	MM_EnvironmentRealtime env(_vm);
+	MM_EnvironmentRealtime env(_vm->omrVM);
 
 	if (_extensions->gcThreadCount > _osInterface->getNumbersOfProcessors()) {
 		j9tty_printf(PORTLIB, "Please specify fewer GC threads than the number of physical processors.\n");
@@ -1087,7 +1087,7 @@ extern "C" {
 void
 j9gc_startGCIfTimeExpired(J9VMThread* vmThread)
 {
-	MM_EnvironmentRealtime *env = MM_EnvironmentRealtime::getEnvironment(vmThread);
+	MM_EnvironmentRealtime *env = MM_EnvironmentRealtime::getEnvironment(vmThread->omrVMThread);
 	MM_Scheduler *scheduler = (MM_Scheduler *)MM_GCExtensions::getExtensions(env)->dispatcher;
 	scheduler->startGCIfTimeExpired(env);
 }
