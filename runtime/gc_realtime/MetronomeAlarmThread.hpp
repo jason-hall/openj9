@@ -1,4 +1,3 @@
-
 /*******************************************************************************
  * Copyright (c) 1991, 2019 IBM Corp. and others
  *
@@ -83,7 +82,7 @@ public:
 		, _mutex(NULL)
 		, _shutdown(false)
 		, _alarmThreadActive(ALARM_THREAD_INACTIVE)
-		, _scheduler((MM_Scheduler *)(MM_GCExtensions::getExtensions(env)->dispatcher))
+		, _scheduler((MM_Scheduler *)(MM_GCExtensionsBase::getExtensions(env->getOmrVM())->dispatcher))
 		, _thread(NULL)
 	{
 		_typeId = __FUNCTION__;
