@@ -100,9 +100,8 @@ MM_WorkPacketsRealtime::createOverflowHandler(MM_EnvironmentBase *env, MM_WorkPa
  * @return Pointer to an input packet
  */
 MM_Packet *
-MM_WorkPacketsRealtime::getInputPacket(MM_EnvironmentBase *envBase)
+MM_WorkPacketsRealtime::getInputPacket(MM_EnvironmentBase *env)
 {
-	MM_EnvironmentRealtime *env = (MM_EnvironmentRealtime *)envBase;
 	MM_Packet *packet = NULL;
 	bool doneFlag = false;
 	volatile uintptr_t doneIndex = _inputListDoneIndex;
@@ -161,9 +160,7 @@ MM_WorkPacketsRealtime::getInputPacket(MM_EnvironmentBase *envBase)
 					 * (We may be overly cautious here, since we are not that sure that overlap between iterations may even happen)
 					 */
 					do {
-						env->reportScanningSuspended();
 						omrthread_monitor_wait(_inputListMonitor);
-						env->reportScanningResumed();
 					} while ((_inputListDoneIndex == doneIndex) && !env->isMasterThread() && ((_yieldCollaborator.getResumeEvent() == MM_YieldCollaborator::notifyMaster) || (_yieldCollaborator.getResumeEvent() == MM_YieldCollaborator::fromYield)));
 				}
 			}

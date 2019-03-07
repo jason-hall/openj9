@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 1991, 2019 IBM Corp. and others
+ * Copyright (c) 1991, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -101,7 +101,7 @@ public:
 		/*((MM_SegregatedAllocationInterface *)walkThreadEnv->_objectAllocationInterface)->preMarkCache(walkThreadEnv);*/
 		walkThreadEnv->_objectAllocationInterface->flushCache(walkThreadEnv);
 		/* Disable the double barrier on the scanned thread. */
-		realtimeGC->disableDoubleBarrierOnThread(env, walkThread->omrVMThread);
+		realtimeGC->disableDoubleBarrierOnThread(env, walkThread);
 	}
 	
 #if defined(J9VM_GC_FINALIZATION)
@@ -281,15 +281,10 @@ public:
 
 	virtual CompletePhaseCode scanWeakReferencesComplete(MM_EnvironmentBase *envBase) {
 		MM_EnvironmentRealtime *env = MM_EnvironmentRealtime::getEnvironment(envBase);
-		reportScanningStarted(RootScannerEntity_WeakReferenceObjectsComplete);
-
 		if (env->_currentTask->synchronizeGCThreadsAndReleaseMaster(env, UNIQUE_ID)) {
 			env->_cycleState->_referenceObjectOptions |= MM_CycleState::references_clear_weak;
 			env->_currentTask->releaseSynchronizedGCThreads(env);
 		}
-
-		reportScanningEnded(RootScannerEntity_WeakReferenceObjectsComplete);
-
 		return complete_phase_OK;
 	}
 
@@ -501,7 +496,7 @@ MM_RealtimeMarkingScheme::markRoots(MM_EnvironmentRealtime *env, MM_RealtimeMark
 		/* Setting the permanent class loaders to scanned without a locked operation is safe
 		 * Class loaders will not be rescanned until a thread synchronize is executed
 		 */
-		if(_realtimeGC->getRealtimeDelegate()->isDynamicClassUnloadingEnabled()) {
+		if(_realtimeGC->isDynamicClassUnloadingEnabled()) {
 			((J9ClassLoader *)_javaVM->systemClassLoader)->gcFlags |= J9_GC_CLASS_LOADER_SCANNED;
 			markObject(env, (J9Object *)((J9ClassLoader *)_javaVM->systemClassLoader)->classLoaderObject);
 			if(_javaVM->applicationClassLoader) {
@@ -543,7 +538,7 @@ MM_RealtimeMarkingScheme::markRoots(MM_EnvironmentRealtime *env, MM_RealtimeMark
 		_scheduler->condYieldFromGC(env);
 #endif /* J9VM_GC_FINALIZATION */
 #if defined(J9VM_GC_DYNAMIC_CLASS_UNLOADING) 
-		if (!_realtimeGC->getRealtimeDelegate()->isDynamicClassUnloadingEnabled()) {
+		if (!_realtimeGC->isDynamicClassUnloadingEnabled()) {
 #endif /* J9VM_GC_DYNAMIC_CLASS_UNLOADING */ 
 			/* We are scanning all classes, no need to include stack frame references */
 			rootScanner->setIncludeStackFrameClassReferences(false); 
@@ -606,7 +601,7 @@ MM_RealtimeMarkingScheme::markLiveObjects(MM_EnvironmentRealtime *env)
 	MM_RealtimeMarkingSchemeRootMarker rootMarker(env, _realtimeGC);
 	env->setRootScanner(&rootMarker);
 #if defined(J9VM_GC_DYNAMIC_CLASS_UNLOADING)
-	rootMarker.setClassDataAsRoots(!_realtimeGC->getRealtimeDelegate()->isDynamicClassUnloadingEnabled());
+	rootMarker.setClassDataAsRoots(!_realtimeGC->isDynamicClassUnloadingEnabled());
 #endif /* J9VM_GC_DYNAMIC_CLASS_UNLOADING */
 	markRoots(env, &rootMarker);
 	env->setRootScanner(NULL);
@@ -647,7 +642,7 @@ MM_RealtimeMarkingScheme::markLiveObjects(MM_EnvironmentRealtime *env)
 		
 #if defined(J9VM_GC_DYNAMIC_CLASS_UNLOADING)
 		/* enable to use mark information to detect is class dead */
-		_realtimeGC->getRealtimeDelegate()->_unmarkedImpliesClasses = true;
+		_realtimeGC->_unmarkedImpliesClasses = true;
 #endif /* defined(J9VM_GC_DYNAMIC_CLASS_UNLOADING) */
 
 		/* This is the symmetric call to the enabling of the write barrier that happens at the top of this method. */
@@ -734,7 +729,7 @@ MM_RealtimeMarkingScheme::scanMixedObject(MM_EnvironmentRealtime *env, J9Object 
 #endif /* J9VM_GC_LEAF_BITS */
 	
 #if defined(J9VM_GC_DYNAMIC_CLASS_UNLOADING)
-	if(_realtimeGC->getRealtimeDelegate()->isDynamicClassUnloadingEnabled()) {
+	if(_realtimeGC->isDynamicClassUnloadingEnabled()) {
 		markClassOfObject(env, objectPtr);
 	}
 #endif /* J9VM_GC_DYNAMIC_CLASS_UNLOADING */
@@ -805,7 +800,7 @@ MM_RealtimeMarkingScheme::scanReferenceMixedObject(MM_EnvironmentRealtime *env, 
 #endif /* J9VM_GC_LEAF_BITS */
 	
 #if defined(J9VM_GC_DYNAMIC_CLASS_UNLOADING)
-	if(_realtimeGC->getRealtimeDelegate()->isDynamicClassUnloadingEnabled()) {
+	if(_realtimeGC->isDynamicClassUnloadingEnabled()) {
 		markClassOfObject(env, objectPtr);
 	}
 #endif /* J9VM_GC_DYNAMIC_CLASS_UNLOADING */
@@ -829,23 +824,23 @@ MM_RealtimeMarkingScheme::scanReferenceMixedObject(MM_EnvironmentRealtime *env, 
 	descriptionIndex = J9_OBJECT_DESCRIPTION_SIZE - 1;
 
 	I_32 referenceState = J9GC_J9VMJAVALANGREFERENCE_STATE(env, objectPtr);
-	UDATA referenceObjectType = J9CLASS_FLAGS(J9GC_J9OBJECT_CLAZZ(objectPtr)) & J9AccClassReferenceMask;
+	UDATA referenceObjectType = J9CLASS_FLAGS(J9GC_J9OBJECT_CLAZZ(objectPtr)) & J9_JAVA_CLASS_REFERENCE_MASK;
 	UDATA referenceObjectOptions = env->_cycleState->_referenceObjectOptions;
 	bool isReferenceCleared = (GC_ObjectModel::REF_STATE_CLEARED == referenceState) || (GC_ObjectModel::REF_STATE_ENQUEUED == referenceState);
 	bool referentMustBeMarked = isReferenceCleared;
 	bool referentMustBeCleared = false;
 
 	switch (referenceObjectType) {
-	case J9AccClassReferenceWeak:
+	case J9_JAVA_CLASS_REFERENCE_WEAK:
 		referentMustBeCleared = (0 != (referenceObjectOptions & MM_CycleState::references_clear_weak));
 		break;
-	case J9AccClassReferenceSoft:
+	case J9_JAVA_CLASS_REFERENCE_SOFT:
 		referentMustBeCleared = (0 != (referenceObjectOptions & MM_CycleState::references_clear_soft));
 		referentMustBeMarked = referentMustBeMarked || (
 			((0 == (referenceObjectOptions & MM_CycleState::references_soft_as_weak))
 			&& ((UDATA)J9GC_J9VMJAVALANGSOFTREFERENCE_AGE(env, objectPtr) < _gcExtensions->getDynamicMaxSoftReferenceAge())));
 		break;
-	case J9AccClassReferencePhantom:
+	case J9_JAVA_CLASS_REFERENCE_PHANTOM:
 		referentMustBeCleared = (0 != (referenceObjectOptions & MM_CycleState::references_clear_phantom));
 		break;
 	default:
@@ -907,7 +902,7 @@ MM_RealtimeMarkingScheme::scanPointerArrayObject(MM_EnvironmentRealtime *env, J9
 	UDATA pointerFields = 0;
 	
 #if defined(J9VM_GC_DYNAMIC_CLASS_UNLOADING)
-	if(_realtimeGC->getRealtimeDelegate()->isDynamicClassUnloadingEnabled()) {
+	if(_realtimeGC->isDynamicClassUnloadingEnabled()) {
 		markClassOfObject(env, (J9Object *)objectPtr);
 	}
 #endif /* J9VM_GC_DYNAMIC_CLASS_UNLOADING */
@@ -1058,7 +1053,7 @@ MM_RealtimeMarkingScheme::scanUnfinalizedObjects(MM_EnvironmentRealtime *env)
 					/* object was not previously marked -- it is now finalizable so push it to the local buffer */
 					buffer.add(env, object);
 					gcEnv->_markJavaStats._unfinalizedEnqueued += 1;
-					_realtimeGC->getRealtimeDelegate()->_finalizationRequired = true;
+					_realtimeGC->_finalizationRequired = true;
 				} else {
 					/* object was already marked. It is still unfinalized */
 					gcEnv->_unfinalizedObjectBuffer->add(env, object);
@@ -1209,9 +1204,9 @@ MM_RealtimeMarkingScheme::processReferenceList(MM_EnvironmentRealtime *env, MM_H
 		GC_SlotObject referentSlotObject(_gcExtensions->getOmrVM(), &J9GC_J9VMJAVALANGREFERENCE_REFERENT(env, referenceObj));
 		J9Object *referent = referentSlotObject.readReferenceFromSlot();
 		if (NULL != referent) {
-			UDATA referenceObjectType = J9CLASS_FLAGS(J9GC_J9OBJECT_CLAZZ(referenceObj)) & J9AccClassReferenceMask;
+			UDATA referenceObjectType = J9CLASS_FLAGS(J9GC_J9OBJECT_CLAZZ(referenceObj)) & J9_JAVA_CLASS_REFERENCE_MASK;
 			if (isMarked(referent)) {
-				if (J9AccClassReferenceSoft == referenceObjectType) {
+				if (J9_JAVA_CLASS_REFERENCE_SOFT == referenceObjectType) {
 					U_32 age = J9GC_J9VMJAVALANGSOFTREFERENCE_AGE(env, referenceObj);
 					if (age < _gcExtensions->getMaxSoftReferenceAge()) {
 						/* Soft reference hasn't aged sufficiently yet - increment the age */
@@ -1226,7 +1221,7 @@ MM_RealtimeMarkingScheme::processReferenceList(MM_EnvironmentRealtime *env, MM_H
 				referenceStats->_cleared += 1;
 
 				/* Phantom references keep it's referent alive in Java 8 and doesn't in Java 9 and later */
-				if ((J9AccClassReferencePhantom == referenceObjectType) && ((J2SE_VERSION(_javaVM) & J2SE_VERSION_MASK) <= J2SE_18)) {
+				if ((J9_JAVA_CLASS_REFERENCE_PHANTOM == referenceObjectType) && ((J2SE_VERSION(_javaVM) & J2SE_VERSION_MASK) <= J2SE_18)) {
 					/* Scanning will be done after the enqueuing */
 					markObject(env, referent);
 				} else {
@@ -1239,7 +1234,7 @@ MM_RealtimeMarkingScheme::processReferenceList(MM_EnvironmentRealtime *env, MM_H
 					buffer.add(env, referenceObj);
 					referenceStats->_enqueued += 1;
 					/* Flag for the finalizer */
-					_realtimeGC->getRealtimeDelegate()->_finalizationRequired = true;
+					_realtimeGC->_finalizationRequired = true;
 				}
 #endif /* J9VM_GC_FINALIZATION */
 			}

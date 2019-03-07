@@ -46,12 +46,12 @@ private:
 	MM_Alarm *_alarm;
 	omrthread_monitor_t _mutex;
 	volatile bool _shutdown;
-	enum AlarmThreadActive {
+	enum AlarmThradActive {
 			ALARM_THREAD_INACTIVE,
 			ALARM_THREAD_ACTIVE,
 			ALARM_THREAD_SHUTDOWN
 	};
-	volatile  AlarmThreadActive _alarmThreadActive;
+	volatile  AlarmThradActive _alarmThreadActive;
 	MM_Scheduler *_scheduler;
 
 protected:
@@ -93,7 +93,7 @@ public:
 	 * Friends
 	 */
 	friend class MM_Scheduler;
-	friend class MM_MetronomeAlarmThreadDelegate;
+	friend class MM_MetronomeDelegate;
 };
 
 #endif /* METRONOMEALARMTHREAD_HPP_ */

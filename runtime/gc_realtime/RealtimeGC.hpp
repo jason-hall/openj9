@@ -103,7 +103,7 @@ public:
 	MM_WorkPacketsRealtime *_workPackets;
 
 	bool _stopTracing;
-	MM_RealtimeGCDelegate _realtimeDelegate;
+	MM_MetronomeDelegate _realtimeDelegate;
 
 	/*
 	 * Function members
