@@ -34,6 +34,7 @@
 #include "Heap.hpp"
 #include "HeapRegionDescriptorRealtime.hpp"
 #include "OwnableSynchronizerObjectList.hpp"
+#include "RealtimeAccessBarrier.hpp"
 #include "RealtimeGC.hpp"
 #include "RealtimeMarkingScheme.hpp"
 #include "ReferenceObjectList.hpp"
@@ -70,7 +71,7 @@ MM_RealtimeGCDelegate::initialize(MM_EnvironmentBase *env)
 
 	/* create the appropriate access barrier for this configuration of Metronome */
 	MM_RealtimeAccessBarrier *accessBarrier = NULL;
-	accessBarrier = _realtimeGC->allocateAccessBarrier(env);
+	accessBarrier = allocateAccessBarrier(env);
 	if (NULL == accessBarrier) {
 		return false;
 	}

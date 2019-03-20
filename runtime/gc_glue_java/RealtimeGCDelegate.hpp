@@ -33,6 +33,8 @@
 #include "EnvironmentRealtime.hpp"
 #include "GCExtensions.hpp"
 
+class MM_RealtimeAccessBarrier;
+
 class MM_RealtimeGCDelegate : public MM_BaseNonVirtual
 {
 private:
@@ -60,6 +62,7 @@ public:
 	bool initialize(MM_EnvironmentBase *env);
 	void tearDown(MM_EnvironmentBase *env);
 
+	virtual MM_RealtimeAccessBarrier *allocateAccessBarrier(MM_EnvironmentBase *env) { return NULL; }
 	bool allocateAndInitializeReferenceObjectLists(MM_EnvironmentBase *env);
 	bool allocateAndInitializeUnfinalizedObjectLists(MM_EnvironmentBase *env);
 	bool allocateAndInitializeOwnableSynchronizerObjectLists(MM_EnvironmentBase *env);

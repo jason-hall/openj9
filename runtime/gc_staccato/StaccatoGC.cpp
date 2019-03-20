@@ -168,12 +168,6 @@ MM_StaccatoGC::doTracing(MM_EnvironmentRealtime *env)
 	} while(_moreTracingRequired);
 }
 
-MM_RealtimeAccessBarrier* 
-MM_StaccatoGC::allocateAccessBarrier(MM_EnvironmentBase *env)
-{
-	return _staccatoDelegate.allocateAccessBarrier(env);
-}
-
 void
 MM_StaccatoGC::enableDoubleBarrier(MM_EnvironmentBase* env)
 {
