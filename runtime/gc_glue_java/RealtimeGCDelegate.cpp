@@ -39,7 +39,6 @@
 #include "ReferenceObjectList.hpp"
 #include "UnfinalizedObjectList.hpp"
 
-
 void
 MM_RealtimeGCDelegate::clearGCStats(MM_EnvironmentBase *env)
 {
