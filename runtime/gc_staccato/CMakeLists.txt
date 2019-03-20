@@ -24,7 +24,6 @@ add_library(j9staccato STATIC
 	ConfigurationStaccato.cpp
 	EnvironmentStaccato.cpp
 	StaccatoAccessBarrier.cpp
-	StaccatoGC.cpp
 
 )
 
