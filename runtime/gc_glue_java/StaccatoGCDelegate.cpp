@@ -32,8 +32,6 @@
 #include "Heap.hpp"
 #include "RealtimeMarkingScheme.hpp"
 #include "StaccatoAccessBarrier.hpp"
-#include "StaccatoGC.hpp"
-
 
 /**
  * Factory method for creating the access barrier. Note that the default staccato access barrier

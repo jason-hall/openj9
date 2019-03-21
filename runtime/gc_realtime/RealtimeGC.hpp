@@ -40,6 +40,7 @@
 #include "OMRVMInterface.hpp"
 #include "RealtimeGCDelegate.hpp"
 #include "Scheduler.hpp"
+#include "StaccatoGCDelegate.hpp"
 #include "WorkPacketsRealtime.hpp"
 
 class MM_Dispatcher;
@@ -80,6 +81,9 @@ private:
 	
 	MM_CycleState _cycleState;  /**< Embedded cycle state to be used as the master cycle state for GC activity */
 
+	bool _moreTracingRequired; /**< Is used to decide if there needs to be another pass of the tracing loop. */
+	MM_StaccatoGCDelegate _staccatoDelegate;
+
 protected:
 	MM_RealtimeMarkingScheme *_markingScheme; /**< The marking scheme used to mark objects. */
 	MM_SweepSchemeRealtime *_sweepScheme; /**< The sweep scheme used to sweep objects for MemoryPoolSegregated. */
@@ -106,9 +110,9 @@ public:
 	 */
 private:
 protected:
-	virtual void internalPreCollect(MM_EnvironmentBase *env, MM_MemorySubSpace *subSpace, MM_AllocateDescription *allocDescription, U_32 gcCode);
-	virtual void internalPostCollect(MM_EnvironmentBase *env, MM_MemorySubSpace *subSpace);
-	virtual bool internalGarbageCollect(MM_EnvironmentBase *env, MM_MemorySubSpace *subSpace, MM_AllocateDescription *allocDescription);
+	void internalPreCollect(MM_EnvironmentBase *env, MM_MemorySubSpace *subSpace, MM_AllocateDescription *allocDescription, U_32 gcCode);
+	void internalPostCollect(MM_EnvironmentBase *env, MM_MemorySubSpace *subSpace);
+	bool internalGarbageCollect(MM_EnvironmentBase *env, MM_MemorySubSpace *subSpace, MM_AllocateDescription *allocDescription);
 	
 	void reportMarkStart(MM_EnvironmentBase *env);
 	void reportMarkEnd(MM_EnvironmentBase *env);
@@ -123,7 +127,7 @@ public:
 	void doAuxilaryGCWork(MM_EnvironmentBase *env); /* Wake up finalizer thread. Discard segments freed by class unloading. */
 	void incrementalCollect(MM_EnvironmentRealtime *env);
 
-	virtual void *createSweepPoolState(MM_EnvironmentBase *env, MM_MemoryPool *memoryPool)
+	void *createSweepPoolState(MM_EnvironmentBase *env, MM_MemoryPool *memoryPool)
 	{
 		/*
 		 *  This function does nothing and is designed to have implementation of abstract in GlobalCollector,
@@ -132,7 +136,7 @@ public:
 		return this;
 	}
 	
-	virtual void deleteSweepPoolState(MM_EnvironmentBase *env, void *sweepPoolState)
+	void deleteSweepPoolState(MM_EnvironmentBase *env, void *sweepPoolState)
 	{
 		/*
 		 *  This function does nothing and is designed to have implementation of abstract in GlobalCollector
@@ -166,37 +170,38 @@ public:
 		return (_extensions->nonDeterministicSweep && !isCollectorSweepingArraylets());
 	}
 
-	virtual uintptr_t getVMStateID() { return OMRVMSTATE_GC_COLLECTOR_METRONOME; };
+	uintptr_t getVMStateID() { return OMRVMSTATE_GC_COLLECTOR_METRONOME; };
 
-	virtual void kill(MM_EnvironmentBase *env) = 0;
+	static MM_RealtimeGC *newInstance(MM_EnvironmentBase *env);
+	void kill(MM_EnvironmentBase *env);
 	bool initialize(MM_EnvironmentBase *env);
 	void tearDown(MM_EnvironmentBase *env);
 	uintptr_t verbose(MM_EnvironmentBase *env);
 	uintptr_t gcCount() { return  _extensions->globalGCStats.gcCount; }
 
-	MMINLINE bool isBarrierEnabled()			{	return (_gcPhase == GC_PHASE_ROOT || _gcPhase == GC_PHASE_TRACE  || _gcPhase == GC_PHASE_CONCURRENT_TRACE); }
+	MMINLINE bool isBarrierEnabled()			{ return (_gcPhase == GC_PHASE_ROOT || _gcPhase == GC_PHASE_TRACE  || _gcPhase == GC_PHASE_CONCURRENT_TRACE); }
 
-	MMINLINE bool isCollectorIdle()				{	return (_gcPhase == GC_PHASE_IDLE);	 }
-	MMINLINE bool isCollectorRootMarking()		{	return (_gcPhase == GC_PHASE_ROOT);	 }
-	MMINLINE bool isCollectorTracing()			{	return (_gcPhase == GC_PHASE_TRACE); }
-	MMINLINE bool isCollectorUnloadingClassLoaders() {	return (_gcPhase == GC_PHASE_UNLOADING_CLASS_LOADERS); }
-	MMINLINE bool isCollectorSweeping()			{	return (_gcPhase == GC_PHASE_SWEEP); }
-	MMINLINE bool isCollectorConcurrentTracing() {	return (_gcPhase == GC_PHASE_CONCURRENT_TRACE); }
-	MMINLINE bool isCollectorConcurrentSweeping() {	return (_gcPhase == GC_PHASE_CONCURRENT_SWEEP); }	
+	MMINLINE bool isCollectorIdle()				{ return (_gcPhase == GC_PHASE_IDLE);	 }
+	MMINLINE bool isCollectorRootMarking()		{ return (_gcPhase == GC_PHASE_ROOT);	 }
+	MMINLINE bool isCollectorTracing()			{ return (_gcPhase == GC_PHASE_TRACE); }
+	MMINLINE bool isCollectorUnloadingClassLoaders() { return (_gcPhase == GC_PHASE_UNLOADING_CLASS_LOADERS); }
+	MMINLINE bool isCollectorSweeping()			{ return (_gcPhase == GC_PHASE_SWEEP); }
+	MMINLINE bool isCollectorConcurrentTracing() { return (_gcPhase == GC_PHASE_CONCURRENT_TRACE); }
+	MMINLINE bool isCollectorConcurrentSweeping() { return (_gcPhase == GC_PHASE_CONCURRENT_SWEEP); }	
 	MMINLINE bool isCollectorSweepingArraylets() { return _sweepingArraylets; }
 	MMINLINE bool isFixHeapForWalk() { return _fixHeapForWalk; }	
 
-	MMINLINE void setCollectorIdle()			{	_gcPhase = GC_PHASE_IDLE; _sched->_gcPhaseSet |= GC_PHASE_IDLE;	}
-	MMINLINE void setCollectorRootMarking()		{	_gcPhase = GC_PHASE_ROOT; _sched->_gcPhaseSet |= GC_PHASE_ROOT;	}
-	MMINLINE void setCollectorTracing()			{	_gcPhase = GC_PHASE_TRACE; _sched->_gcPhaseSet |= GC_PHASE_TRACE;	}
-	MMINLINE void setCollectorUnloadingClassLoaders()			{	_gcPhase = GC_PHASE_UNLOADING_CLASS_LOADERS; _sched->_gcPhaseSet |= GC_PHASE_UNLOADING_CLASS_LOADERS;	}
-	MMINLINE void setCollectorSweeping()		{	_gcPhase = GC_PHASE_SWEEP; _sched->_gcPhaseSet |= GC_PHASE_SWEEP;	}
-	MMINLINE void setCollectorConcurrentTracing()		{	_gcPhase = GC_PHASE_CONCURRENT_TRACE; _sched->_gcPhaseSet |= GC_PHASE_CONCURRENT_TRACE;	}
-	MMINLINE void setCollectorConcurrentSweeping()		{	_gcPhase = GC_PHASE_CONCURRENT_SWEEP; _sched->_gcPhaseSet |= GC_PHASE_CONCURRENT_SWEEP;	}
+	MMINLINE void setCollectorIdle()			{ _gcPhase = GC_PHASE_IDLE; _sched->_gcPhaseSet |= GC_PHASE_IDLE; }
+	MMINLINE void setCollectorRootMarking()		{ _gcPhase = GC_PHASE_ROOT; _sched->_gcPhaseSet |= GC_PHASE_ROOT; }
+	MMINLINE void setCollectorTracing()			{ _gcPhase = GC_PHASE_TRACE; _sched->_gcPhaseSet |= GC_PHASE_TRACE; }
+	MMINLINE void setCollectorUnloadingClassLoaders()			{ _gcPhase = GC_PHASE_UNLOADING_CLASS_LOADERS; _sched->_gcPhaseSet |= GC_PHASE_UNLOADING_CLASS_LOADERS; }
+	MMINLINE void setCollectorSweeping()		{ _gcPhase = GC_PHASE_SWEEP; _sched->_gcPhaseSet |= GC_PHASE_SWEEP; }
+	MMINLINE void setCollectorConcurrentTracing()		{ _gcPhase = GC_PHASE_CONCURRENT_TRACE; _sched->_gcPhaseSet |= GC_PHASE_CONCURRENT_TRACE; }
+	MMINLINE void setCollectorConcurrentSweeping()		{ _gcPhase = GC_PHASE_CONCURRENT_SWEEP; _sched->_gcPhaseSet |= GC_PHASE_CONCURRENT_SWEEP; }
 	MMINLINE void setCollectorSweepingArraylets(bool sweepingArraylets) { _sweepingArraylets = sweepingArraylets; }
 	MMINLINE void setFixHeapForWalk(bool fixHeapForWalk) { _fixHeapForWalk = fixHeapForWalk; }
 	MMINLINE bool isPreviousCycleBelowTrigger() { return _previousCycleBelowTrigger; }
-	MMINLINE void setPreviousCycleBelowTrigger(bool previousCycleBelowTrigger) { _previousCycleBelowTrigger = previousCycleBelowTrigger ; }
+	MMINLINE void setPreviousCycleBelowTrigger(bool previousCycleBelowTrigger) { _previousCycleBelowTrigger = previousCycleBelowTrigger; }
 		
 	void enqueuePointerArraylet(MM_EnvironmentRealtime *env, fomrobject_t *arraylet);
 	
@@ -220,19 +225,22 @@ public:
 	 * Currently called before debug function showPages for calculating region pool stats.
 	 */
 	void flushCachedFullRegions(MM_EnvironmentBase *env);
-	virtual void setGCThreadPriority(OMR_VMThread *vmThread, uintptr_t priority);
+	void setGCThreadPriority(OMR_VMThread *vmThread, uintptr_t priority);
 	/* Create the access barrier */
 	MM_WorkPacketsRealtime* allocateWorkPackets(MM_EnvironmentBase *env);
 	/* Create an EventTypeSpaceVersion object for TuningFork tracing */
-	virtual void doTracing(MM_EnvironmentRealtime* env) = 0;
-	virtual bool condYield(MM_EnvironmentBase *env, U_64 timeSlackNanoSec);
-	virtual bool shouldYield(MM_EnvironmentBase *env);
-	virtual void yield(MM_EnvironmentBase *env);
-	virtual void enableWriteBarrier(MM_EnvironmentBase* env) = 0;
-	virtual void disableWriteBarrier(MM_EnvironmentBase* env) = 0;
-	virtual void enableDoubleBarrier(MM_EnvironmentBase* env) = 0;
-	virtual void disableDoubleBarrierOnThread(MM_EnvironmentBase* env, OMR_VMThread *vmThread) = 0;
-	virtual void disableDoubleBarrier(MM_EnvironmentBase* env) = 0;
+	void doTracing(MM_EnvironmentRealtime* env);
+	bool condYield(MM_EnvironmentBase *env, U_64 timeSlackNanoSec);
+	bool shouldYield(MM_EnvironmentBase *env);
+	void yield(MM_EnvironmentBase *env);
+	void enableWriteBarrier(MM_EnvironmentBase* env);
+	void disableWriteBarrier(MM_EnvironmentBase* env);
+	void enableDoubleBarrier(MM_EnvironmentBase* env);
+	void disableDoubleBarrierOnThread(MM_EnvironmentBase* env, OMR_VMThread *vmThread);
+	void disableDoubleBarrier(MM_EnvironmentBase* env);
+
+	void flushRememberedSet(MM_EnvironmentRealtime *env);
+
 	MM_RealtimeMarkingScheme *getMarkingScheme() { return _markingScheme; }
 	MM_SweepSchemeRealtime *getSweepScheme() { return _sweepScheme; }
 	MM_RealtimeGCDelegate *getRealtimeDelegate() { return &_realtimeDelegate; }
@@ -247,6 +255,8 @@ public:
 		, _previousCycleBelowTrigger(true)
 		, _sweepingArraylets(false)
 		, _cycleState()
+		, _moreTracingRequired(false)
+		, _staccatoDelegate(env)
 		, _markingScheme(NULL)
 		, _sweepScheme(NULL)
 		, _memoryPool(NULL)
