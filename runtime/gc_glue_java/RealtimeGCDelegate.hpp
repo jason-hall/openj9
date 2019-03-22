@@ -121,6 +121,18 @@ public:
 	UDATA getOwnableSynchronizerObjectListCount(MM_EnvironmentBase *env) { return _extensions->gcThreadCount; }
 	UDATA getReferenceObjectListCount(MM_EnvironmentBase *env) { return _extensions->gcThreadCount; }
 
+	virtual MM_RealtimeAccessBarrier* allocateAccessBarrier(MM_EnvironmentBase *env);
+
+	virtual void enableDoubleBarrier(MM_EnvironmentBase* env);
+	virtual void disableDoubleBarrierOnThread(MM_EnvironmentBase* env, OMR_VMThread* vmThread);
+	virtual void disableDoubleBarrier(MM_EnvironmentBase* env);
+
+	/* New methods */
+#if defined(J9VM_GC_DYNAMIC_CLASS_UNLOADING)
+	bool doClassTracing(MM_EnvironmentRealtime* env);
+#endif /* J9VM_GC_DYNAMIC_CLASS_UNLOADING */
+	virtual bool doTracing(MM_EnvironmentRealtime* env);
+
 	/*
 	 * Friends
 	 */

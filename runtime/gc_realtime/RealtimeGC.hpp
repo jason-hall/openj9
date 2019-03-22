@@ -40,7 +40,6 @@
 #include "OMRVMInterface.hpp"
 #include "RealtimeGCDelegate.hpp"
 #include "Scheduler.hpp"
-#include "StaccatoGCDelegate.hpp"
 #include "WorkPacketsRealtime.hpp"
 
 class MM_Dispatcher;
@@ -82,7 +81,6 @@ private:
 	MM_CycleState _cycleState;  /**< Embedded cycle state to be used as the master cycle state for GC activity */
 
 	bool _moreTracingRequired; /**< Is used to decide if there needs to be another pass of the tracing loop. */
-	MM_StaccatoGCDelegate _staccatoDelegate;
 
 protected:
 	MM_RealtimeMarkingScheme *_markingScheme; /**< The marking scheme used to mark objects. */
@@ -256,7 +254,6 @@ public:
 		, _sweepingArraylets(false)
 		, _cycleState()
 		, _moreTracingRequired(false)
-		, _staccatoDelegate(env)
 		, _markingScheme(NULL)
 		, _sweepScheme(NULL)
 		, _memoryPool(NULL)
@@ -271,7 +268,6 @@ public:
 	{
 		_typeId = __FUNCTION__;
 		_realtimeDelegate._realtimeGC = this;
-		_staccatoDelegate._realtimeGC = this;
 	}
 
 	/*
