@@ -190,7 +190,7 @@ MM_RealtimeMarkingScheme::incrementalCompleteScan(MM_EnvironmentRealtime *env, u
 			scannedPointers = _realtimeGC->getRealtimeDelegate()->scanPointerArraylet(env, arraylet);
 		} else {
 			omrobjectptr_t objectPtr = ITEM_TO_OBJECT(item);
-			scannedPointers = _realtimeGC->getRealtimeDelegate()->scanObject(env, objectPtr);
+			scannedPointers = scanObject(env, objectPtr, SCAN_REASON_PACKET);
 		}
 
 		countSinceLastYieldCheck += 1;
