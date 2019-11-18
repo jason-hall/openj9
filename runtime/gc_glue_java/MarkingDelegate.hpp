@@ -31,11 +31,24 @@
 #if defined(J9VM_GC_DYNAMIC_CLASS_UNLOADING)
 #include "MarkMap.hpp"
 #endif /* defined(J9VM_GC_DYNAMIC_CLASS_UNLOADING) */
+#if defined (J9VM_GC_REALTIME)
+//#include "Metronome.hpp" - File not found
+#endif /* defined (J9VM_GC_REALTIME) */
 #include "MixedObjectScanner.hpp"
 #include "ModronTypes.hpp"
 //#include "RealtimeGC.hpp"
+//#include "RealtimeMarkingScheme.hpp"
 #include "ReferenceObjectScanner.hpp"
 #include "PointerArrayObjectScanner.hpp"
+
+#define ITEM_IS_ARRAYLET 0x1
+#define IS_ITEM_OBJECT(item) ((item & ITEM_IS_ARRAYLET) == 0x0)
+#define IS_ITEM_ARRAYLET(item) ((item & ITEM_IS_ARRAYLET) == ITEM_IS_ARRAYLET)
+#define ITEM_TO_OBJECT(item) ((omrobjectptr_t)(((uintptr_t)item) & (~ITEM_IS_ARRAYLET)))
+#define ITEM_TO_ARRAYLET(item) ((fomrobject_t *)(((uintptr_t)item) & (~ITEM_IS_ARRAYLET)))
+#define ITEM_TO_UDATAP(item) ((uintptr_t *)(((uintptr_t)item) & (~ITEM_IS_ARRAYLET)))
+#define OBJECT_TO_ITEM(obj) ((uintptr_t) obj)
+#define ARRAYLET_TO_ITEM(arraylet) (((uintptr_t) arraylet) | ITEM_IS_ARRAYLET)
 
 class GC_ObjectScanner;
 class MM_EnvironmentBase;
@@ -70,7 +83,7 @@ private:
 	MMINLINE void clearReference(MM_EnvironmentBase *env, omrobjectptr_t objectPtr, bool isReferenceCleared, bool referentMustBeCleared);
 	MMINLINE bool getReferenceStatus(MM_EnvironmentBase *env, omrobjectptr_t objectPtr, bool *referentMustBeMarked, bool *isReferenceCleared);
 	fomrobject_t *setupReferenceObjectScanner(MM_EnvironmentBase *env, omrobjectptr_t objectPtr, MM_MarkingSchemeScanReason reason);
-	uintptr_t setupPointerArrayScanner(MM_EnvironmentBase *env, omrobjectptr_t objectPtr, MM_MarkingSchemeScanReason reason, uintptr_t *sizeToDo, uintptr_t *slotsToDo);
+	uintptr_t setupPointerArrayScanner(MM_EnvironmentBase *env, omrobjectptr_t objectPtr, MM_MarkingSchemeScanReason reason, uintptr_t *sizeToDo, uintptr_t *slotsToDo, fomrobject_t **basePtr, uintptr_t *flags);
 
 protected:
 
@@ -118,57 +131,65 @@ public:
 		Assert_MM_true((UDATA)0x99669966 == clazz->eyecatcher);
 
 		GC_ObjectScanner *objectScanner = NULL;
-		switch(_extensions->objectModel.getScanType(objectPtr)) {
-		case GC_ObjectModel::SCAN_MIXED_OBJECT_LINKED:
-		case GC_ObjectModel::SCAN_ATOMIC_MARKABLE_REFERENCE_OBJECT:
-		case GC_ObjectModel::SCAN_MIXED_OBJECT:
-		case GC_ObjectModel::SCAN_OWNABLESYNCHRONIZER_OBJECT:
-		case GC_ObjectModel::SCAN_CLASS_OBJECT:
-		case GC_ObjectModel::SCAN_CLASSLOADER_OBJECT:
-			objectScanner = GC_MixedObjectScanner::newInstance(env, objectPtr, scannerSpace, 0);
-			*sizeToDo = sizeof(fomrobject_t) + ((GC_MixedObjectScanner *)objectScanner)->getBytesRemaining();
-			break;
-		case GC_ObjectModel::SCAN_POINTER_ARRAY_OBJECT:
-		{
 #if defined (J9VM_GC_REALTIME)
-			// Moving the scanPointerArrayObject() function from MetronomeDelegate() to this function seems dumb; can't include RealtimeGC or marking shceme headers in here!
-			//env->getExtensions()->realtimeGC->getRealtimeDelegate()->scanPointerArrayObject(env, objectPtr);
-			*sizeToDo = 0;
-#else
-			uintptr_t slotsToDo = 0;
-			uintptr_t startIndex = setupPointerArrayScanner(env, objectPtr, reason, sizeToDo, &slotsToDo);
-			objectScanner = GC_PointerArrayObjectScanner::newInstance(env, objectPtr, scannerSpace, GC_ObjectScanner::indexableObject, slotsToDo, startIndex);
+		if (IS_ITEM_ARRAYLET((uintptr_t)objectPtr)) {
+			J9JavaVM* vm = (J9JavaVM*) _omrVM->_language_vm;
+			objectScanner = GC_PointerArrayObjectScanner::newInstance(env, objectPtr, ITEM_TO_ARRAYLET(objectPtr), scannerSpace, GC_ObjectScanner::indexableObject, (vm->arrayletLeafSize / sizeof(fj9object_t)), 0);
+		} else {
 #endif /* defined (J9VM_GC_REALTIME) */
-			break;
-		}
-		case GC_ObjectModel::SCAN_REFERENCE_MIXED_OBJECT:
-		{
-			fomrobject_t *referentSlotPtr = setupReferenceObjectScanner(env, objectPtr, reason);
-			objectScanner = GC_ReferenceObjectScanner::newInstance(env, objectPtr, referentSlotPtr, scannerSpace, 0);
-			*sizeToDo = sizeof(fomrobject_t) + ((GC_ReferenceObjectScanner *)objectScanner)->getBytesRemaining();
-			break;
-		}
-		case GC_ObjectModel::SCAN_PRIMITIVE_ARRAY_OBJECT:
-			/* nothing to do */
-			*sizeToDo = 0;
-			break;
-		default:
-			Assert_MM_unreachable();
-		}
+			switch(_extensions->objectModel.getScanType(objectPtr)) {
+			case GC_ObjectModel::SCAN_MIXED_OBJECT_LINKED:
+			case GC_ObjectModel::SCAN_ATOMIC_MARKABLE_REFERENCE_OBJECT:
+			case GC_ObjectModel::SCAN_MIXED_OBJECT:
+			case GC_ObjectModel::SCAN_OWNABLESYNCHRONIZER_OBJECT:
+			case GC_ObjectModel::SCAN_CLASS_OBJECT:
+			case GC_ObjectModel::SCAN_CLASSLOADER_OBJECT:
+				objectScanner = GC_MixedObjectScanner::newInstance(env, objectPtr, scannerSpace, 0);
+				*sizeToDo = sizeof(fomrobject_t) + ((GC_MixedObjectScanner *)objectScanner)->getBytesRemaining();
+				break;
+			case GC_ObjectModel::SCAN_POINTER_ARRAY_OBJECT:
+			{
+				uintptr_t slotsToDo = 0;
+				uintptr_t flags = 0;
+				fomrobject_t *basePtr = 0;
+				uintptr_t startIndex = setupPointerArrayScanner(env, objectPtr, reason, sizeToDo, &slotsToDo, &basePtr, &flags);
+				objectScanner = GC_PointerArrayObjectScanner::newInstance(env, objectPtr, basePtr, scannerSpace, flags, slotsToDo, slotsToDo, startIndex);
+				break;
+			}
+			case GC_ObjectModel::SCAN_REFERENCE_MIXED_OBJECT:
+			{
+				fomrobject_t *referentSlotPtr = setupReferenceObjectScanner(env, objectPtr, reason);
+				objectScanner = GC_ReferenceObjectScanner::newInstance(env, objectPtr, referentSlotPtr, scannerSpace, 0);
+				*sizeToDo = sizeof(fomrobject_t) + ((GC_ReferenceObjectScanner *)objectScanner)->getBytesRemaining();
+				break;
+			
+}
+			case GC_ObjectModel::SCAN_PRIMITIVE_ARRAY_OBJECT:
+				/* nothing to do */
+				*sizeToDo = 0;
+				break;
+			default:
+				Assert_MM_unreachable();
+			}
 
 #if defined(J9VM_GC_DYNAMIC_CLASS_UNLOADING)
-		if (isDynamicClassUnloadingEnabled()) {
-			/* only mark the class the first time we scan any array, always mark class for mixed/reference objects */
-			if ((NULL != objectScanner) && objectScanner->isHeadObjectScanner()) {
-				/*  Note: this code cloned from MM_MarkingScheme::inlineMarkObjectNoCheck(), inaccessible here */
-				if (_markMap->atomicSetBit(clazz->classObject)) {
-					/* class object was previously unmarked so push it to workstack */
-					env->_workStack.push(env, (void *)clazz->classObject);
-					env->_markStats._objectsMarked += 1;
+			if (isDynamicClassUnloadingEnabled()) {
+				/* only mark the class the first time we scan any array, always mark class for mixed/reference objects */
+				if ((NULL != objectScanner) && objectScanner->isHeadObjectScanner()) {
+					/*  Note: this code cloned from MM_MarkingScheme::inlineMarkObjectNoCheck(), inaccessible here */
+					if (_markMap->atomicSetBit(clazz->classObject)) {
+						/* class object was previously unmarked so push it to workstack */
+						env->_workStack.push(env, (void *)clazz->classObject);
+						env->_markStats._objectsMarked += 1;
+					}
 				}
 			}
-		}
 #endif /* J9VM_GC_DYNAMIC_CLASS_UNLOADING */
+
+#if defined (J9VM_GC_REALTIME)
+		}
+#endif /* defined (J9VM_GC_REALTIME) */
+
 
 		return objectScanner;
 	}

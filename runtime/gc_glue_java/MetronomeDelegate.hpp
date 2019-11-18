@@ -235,6 +235,7 @@ MMINLINE UDATA
 		}
 #endif /* J9VM_GC_DYNAMIC_CLASS_UNLOADING */
 
+
 		bool isContiguous = _extensions->indexableObjectModel.isInlineContiguousArraylet((J9IndexableObject*)objectPtr);
 
 		/* Very small arrays cannot be set as scanned (no scanned bit in Mark Map reserved for them) */

@@ -36,15 +36,6 @@ class MM_RealtimeGC;
 class MM_RealtimeRootScanner;
 class MM_Scheduler;
 
-#define ITEM_IS_ARRAYLET 0x1
-#define IS_ITEM_OBJECT(item) ((item & ITEM_IS_ARRAYLET) == 0x0)
-#define IS_ITEM_ARRAYLET(item) ((item & ITEM_IS_ARRAYLET) == ITEM_IS_ARRAYLET)
-#define ITEM_TO_OBJECT(item) ((omrobjectptr_t)(((uintptr_t)item) & (~ITEM_IS_ARRAYLET)))
-#define ITEM_TO_ARRAYLET(item) ((fomrobject_t *)(((uintptr_t)item) & (~ITEM_IS_ARRAYLET)))
-#define ITEM_TO_UDATAP(item) ((uintptr_t *)(((uintptr_t)item) & (~ITEM_IS_ARRAYLET)))
-#define OBJECT_TO_ITEM(obj) ((uintptr_t) obj)
-#define ARRAYLET_TO_ITEM(arraylet) (((uintptr_t) arraylet) | ITEM_IS_ARRAYLET)
-
 #define REFERENCE_OBJECT_YIELD_CHECK_INTERVAL 200
 #define UNFINALIZED_OBJECT_YIELD_CHECK_INTERVAL 70
 #define OWNABLE_SYNCHRONIZER_OBJECT_YIELD_CHECK_INTERVAL 70

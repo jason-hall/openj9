@@ -84,14 +84,10 @@ public:
 	 * @param[in] startIndex The index of the first element to scan
 	 */
 	MMINLINE static GC_PointerArrayObjectScanner *
-	newInstance(MM_EnvironmentBase *env, omrobjectptr_t objectPtr, void *allocSpace, uintptr_t flags, uintptr_t splitAmount, uintptr_t startIndex = 0)
+	newInstance(MM_EnvironmentBase *env, omrobjectptr_t objectPtr, fomrobject_t *basePtr, void *allocSpace, uintptr_t flags, uintptr_t splitAmount, uintptr_t sizeInElements,  uintptr_t startIndex = 0)
 	{
 		GC_PointerArrayObjectScanner *objectScanner = (GC_PointerArrayObjectScanner *)allocSpace;
 		if (NULL != objectScanner) {
-			GC_ArrayObjectModel *arrayObjectModel = &(env->getExtensions()->indexableObjectModel);
-			omrarrayptr_t arrayPtr = (omrarrayptr_t)objectPtr;
-			uintptr_t sizeInElements = arrayObjectModel->getSizeInElements(arrayPtr);
-			fomrobject_t *basePtr = (fj9object_t *)arrayObjectModel->getDataPointerForContiguous(arrayPtr);
 			fomrobject_t *scanPtr = basePtr + startIndex;
 			fomrobject_t *limitPtr = basePtr + sizeInElements;
 			fomrobject_t *endPtr = limitPtr;

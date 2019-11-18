@@ -600,9 +600,67 @@ MM_MarkingDelegate::setupReferenceObjectScanner(MM_EnvironmentBase *env, omrobje
 }
 
 uintptr_t
-MM_MarkingDelegate::setupPointerArrayScanner(MM_EnvironmentBase *env, omrobjectptr_t objectPtr, MM_MarkingSchemeScanReason reason, uintptr_t *sizeToDo, uintptr_t *slotsToDo)
+MM_MarkingDelegate::setupPointerArrayScanner(MM_EnvironmentBase *env, omrobjectptr_t objectPtr, MM_MarkingSchemeScanReason reason, uintptr_t *sizeToDo, uintptr_t *slotsToDo, fomrobject_t **basePtr, uintptr_t *flags)
 {
 	uintptr_t startIndex = 0;
+#if defined JVM_GC_REALTIME
+
+#if defined(J9VM_GC_DYNAMIC_CLASS_UNLOADING)
+	if(isDynamicClassUnloadingEnabled()) {
+		markClassOfObject(env, (J9Object *)objectPtr);
+	}
+#endif /* J9VM_GC_DYNAMIC_CLASS_UNLOADING */
+
+
+	bool isContiguous = _extensions->indexableObjectModel.isInlineContiguousArraylet((J9IndexableObject*)objectPtr);
+
+	/* Very small arrays cannot be set as scanned (no scanned bit in Mark Map reserved for them) */
+	bool canSetAsScanned = (isContiguous
+			&& (_extensions->minArraySizeToSetAsScanned <= _extensions->indexableObjectModel.arrayletSize((J9IndexableObject*)objectPtr, 0)));
+
+	if (canSetAsScanned && _markingScheme->isScanned((J9Object *)objectPtr)) {
+		/* Already scanned by ref array copy optimization */
+		return 0;
+	}
+
+	/* if NUA is enabled, separate path for contiguous arrays */
+	UDATA sizeInElements = _extensions->indexableObjectModel.getSizeInElements((J9IndexableObject*)objectPtr);
+	fomrobject_t *startPtr;
+
+	if (isContiguous || (0 == sizeInElements)) {
+		fj9object_t *startScanPtr = (fj9object_t *)_extensions->indexableObjectModel.getDataPointerForContiguous((J9IndexableObject*)objectPtr);
+		fj9object_t *endScanPtr = startScanPtr + sizeInElements;
+		startPtr = startScanPtr;
+		// Note: scanner will be created for this one after this function
+	} else {
+		fj9object_t *arrayoid = _extensions->indexableObjectModel.getArrayoidPointer((J9IndexableObject*)objectPtr);
+		UDATA numArraylets = _extensions->indexableObjectModel.numArraylets((J9IndexableObject*)objectPtr);
+		for (UDATA i=0; i<numArraylets; i++) {
+			UDATA arrayletSize = _extensions->indexableObjectModel.arrayletSize((J9IndexableObject*)objectPtr, i);
+			/* need to check leaf pointer because this can be a partially allocated arraylet (not all leafs are allocated) */
+			GC_SlotObject slotObject(_javaVM->omrVM, &arrayoid[i]);
+			fj9object_t *startScanPtr = (fj9object_t*) (slotObject.readReferenceFromSlot());
+			if (NULL != startScanPtr) {
+				fj9object_t *endScanPtr = startScanPtr + arrayletSize / sizeof(fj9object_t);
+				if (i == (numArraylets - 1)) {
+					// Note: scanner will be created for this one after this function
+					if (canSetAsScanned) {
+						_markingScheme->setScanAtomic((J9Object *)objectPtr);
+					}
+					startPtr = startScanPtr;
+				} else {
+					env->getWorkStack()->push(env, (void *)ARRAYLET_TO_ITEM(startScanPtr));
+				}
+			}
+		}
+	}
+
+	*sizeToDo = sizeInElements * sizeof(fomrobject_t));
+	*slotsToDo = sizeInElements;
+	*basePtr = startPtr;
+	*flags = GC_ObjectScanner::indexableObject;
+
+#else
 	uintptr_t headerBytesToScan = 0;
 	uintptr_t workItem = (uintptr_t)env->_workStack.peek(env);
 	if (PACKET_ARRAY_SPLIT_TAG == (workItem & PACKET_ARRAY_SPLIT_TAG)) {
@@ -657,5 +715,8 @@ MM_MarkingDelegate::setupPointerArrayScanner(MM_EnvironmentBase *env, omrobjectp
 
 	*sizeToDo = headerBytesToScan + (slotsToScan * sizeof(fomrobject_t));
 	*slotsToDo = slotsToScan;
+	*basePtr = (fj9object_t *)_extensions->indexableObjectModel.getDataPointerForContiguous((omrarrayptr_t)objectPtr);
+	*flags = GC_ObjectScanner::indexableObject;
+#endif
 	return startIndex;
 }

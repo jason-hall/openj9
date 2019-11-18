@@ -344,10 +344,13 @@ MM_ScavengerDelegate::getObjectScanner(MM_EnvironmentStandard *env, omrobjectptr
 	case GC_ObjectModel::SCAN_POINTER_ARRAY_OBJECT:
 		{
 			uintptr_t splitAmount = 0;
+			omrarrayptr_t arrayPtr = (omrarrayptr_t)objectPtr;
+			uintptr_t sizeInElements = _extensions->indexableObjectModel.getSizeInElements(arrayPtr);
 			if (!GC_ObjectScanner::isIndexableObjectNoSplit(flags)) {
-				splitAmount = _extensions->scavenger->getArraySplitAmount(env, _extensions->indexableObjectModel.getSizeInElements((omrarrayptr_t)objectPtr));
+				splitAmount = _extensions->scavenger->getArraySplitAmount(env, sizeInElements);
 			}
-			objectScanner = GC_PointerArrayObjectScanner::newInstance(env, objectPtr, allocSpace, flags, splitAmount);
+			fomrobject_t *basePtr = (fj9object_t *)_extensions->indexableObjectModel.getDataPointerForContiguous(arrayPtr);
+			objectScanner = GC_PointerArrayObjectScanner::newInstance(env, objectPtr, basePtr, allocSpace, flags, splitAmount, sizeInElements);
 		}
 		break;
 	case GC_ObjectModel::SCAN_PRIMITIVE_ARRAY_OBJECT:
