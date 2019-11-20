@@ -42,11 +42,11 @@
 #include "PointerArrayObjectScanner.hpp"
 
 #define ITEM_IS_ARRAYLET 0x1
-#define IS_ITEM_OBJECT(item) ((item & ITEM_IS_ARRAYLET) == 0x0)
+//#define IS_ITEM_OBJECT(item) ((item & ITEM_IS_ARRAYLET) == 0x0)
 #define IS_ITEM_ARRAYLET(item) ((item & ITEM_IS_ARRAYLET) == ITEM_IS_ARRAYLET)
 #define ITEM_TO_OBJECT(item) ((omrobjectptr_t)(((uintptr_t)item) & (~ITEM_IS_ARRAYLET)))
 #define ITEM_TO_ARRAYLET(item) ((fomrobject_t *)(((uintptr_t)item) & (~ITEM_IS_ARRAYLET)))
-#define ITEM_TO_UDATAP(item) ((uintptr_t *)(((uintptr_t)item) & (~ITEM_IS_ARRAYLET)))
+//#define ITEM_TO_UDATAP(item) ((uintptr_t *)(((uintptr_t)item) & (~ITEM_IS_ARRAYLET)))
 #define OBJECT_TO_ITEM(obj) ((uintptr_t) obj)
 #define ARRAYLET_TO_ITEM(arraylet) (((uintptr_t) arraylet) | ITEM_IS_ARRAYLET)
 
@@ -134,7 +134,7 @@ public:
 #if defined (J9VM_GC_REALTIME)
 		if (IS_ITEM_ARRAYLET((uintptr_t)objectPtr)) {
 			J9JavaVM* vm = (J9JavaVM*) _omrVM->_language_vm;
-			objectScanner = GC_PointerArrayObjectScanner::newInstance(env, objectPtr, ITEM_TO_ARRAYLET(objectPtr), scannerSpace, GC_ObjectScanner::indexableObject, (vm->arrayletLeafSize / sizeof(fj9object_t)), 0);
+			objectScanner = GC_PointerArrayObjectScanner::newInstance(env, objectPtr, ITEM_TO_ARRAYLET(objectPtr), scannerSpace, GC_ObjectScanner::indexableObjectNoSplit, (vm->arrayletLeafSize / sizeof(fj9object_t)), 0);
 		} else {
 #endif /* defined (J9VM_GC_REALTIME) */
 			switch(_extensions->objectModel.getScanType(objectPtr)) {
@@ -153,7 +153,8 @@ public:
 				uintptr_t flags = 0;
 				fomrobject_t *basePtr = 0;
 				uintptr_t startIndex = setupPointerArrayScanner(env, objectPtr, reason, sizeToDo, &slotsToDo, &basePtr, &flags);
-				objectScanner = GC_PointerArrayObjectScanner::newInstance(env, objectPtr, basePtr, scannerSpace, flags, slotsToDo, slotsToDo, startIndex);
+
+				objectScanner = GC_PointerArrayObjectScanner::newInstance(env, objectPtr, basePtr, scannerSpace, flags, slotsToDo, slotsToDo + startIndex, startIndex);
 				break;
 			}
 			case GC_ObjectModel::SCAN_REFERENCE_MIXED_OBJECT:

@@ -629,9 +629,9 @@ MM_MarkingDelegate::setupPointerArrayScanner(MM_EnvironmentBase *env, omrobjectp
 
 	if (isContiguous || (0 == sizeInElements)) {
 		fj9object_t *startScanPtr = (fj9object_t *)_extensions->indexableObjectModel.getDataPointerForContiguous((J9IndexableObject*)objectPtr);
-		fj9object_t *endScanPtr = startScanPtr + sizeInElements;
+// fj9object_t *endScanPtr = startScanPtr + sizeInElements;
 		startPtr = startScanPtr;
-		// Note: scanner will be created for this one after this function
+// Note: scanner will be created for this one after this function
 	} else {
 		fj9object_t *arrayoid = _extensions->indexableObjectModel.getArrayoidPointer((J9IndexableObject*)objectPtr);
 		UDATA numArraylets = _extensions->indexableObjectModel.numArraylets((J9IndexableObject*)objectPtr);
@@ -641,13 +641,14 @@ MM_MarkingDelegate::setupPointerArrayScanner(MM_EnvironmentBase *env, omrobjectp
 			GC_SlotObject slotObject(_javaVM->omrVM, &arrayoid[i]);
 			fj9object_t *startScanPtr = (fj9object_t*) (slotObject.readReferenceFromSlot());
 			if (NULL != startScanPtr) {
-				fj9object_t *endScanPtr = startScanPtr + arrayletSize / sizeof(fj9object_t);
+// fj9object_t *endScanPtr = startScanPtr + arrayletSize / sizeof(fj9object_t);
 				if (i == (numArraylets - 1)) {
 					// Note: scanner will be created for this one after this function
 					if (canSetAsScanned) {
 						_markingScheme->setScanAtomic((J9Object *)objectPtr);
 					}
 					startPtr = startScanPtr;
+					sizeInElements = arrayletSize / sizeof(fj9object_t);
 				} else {
 					env->getWorkStack()->push(env, (void *)ARRAYLET_TO_ITEM(startScanPtr));
 				}
@@ -658,7 +659,10 @@ MM_MarkingDelegate::setupPointerArrayScanner(MM_EnvironmentBase *env, omrobjectp
 	*sizeToDo = sizeInElements * sizeof(fomrobject_t));
 	*slotsToDo = sizeInElements;
 	*basePtr = startPtr;
-	*flags = GC_ObjectScanner::indexableObject;
+	*flags = GC_ObjectScanner::indexableObjectNoSplit;
+
+
+Assert_MM_true(_markingScheme->isHeapObject((omrobjectptr_t)startPtr));
 
 #else
 	uintptr_t headerBytesToScan = 0;
@@ -717,6 +721,10 @@ MM_MarkingDelegate::setupPointerArrayScanner(MM_EnvironmentBase *env, omrobjectp
 	*slotsToDo = slotsToScan;
 	*basePtr = (fj9object_t *)_extensions->indexableObjectModel.getDataPointerForContiguous((omrarrayptr_t)objectPtr);
 	*flags = GC_ObjectScanner::indexableObject;
+
+
+Assert_MM_true(_markingScheme->isHeapObject((omrobjectptr_t)*basePtr));
+
 #endif
 	return startIndex;
 }
