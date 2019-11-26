@@ -51,6 +51,8 @@
 #include "MarkingSchemeRootClearer.hpp"
 #include "OwnableSynchronizerObjectList.hpp"
 #include "ReferenceObjectBuffer.hpp"
+/*--*/
+#include "RealtimeGC.hpp"
 #include "RootScanner.hpp"
 #include "StackSlotValidator.hpp"
 #include "Task.hpp"
@@ -600,14 +602,18 @@ MM_MarkingDelegate::setupReferenceObjectScanner(MM_EnvironmentBase *env, omrobje
 }
 
 uintptr_t
-MM_MarkingDelegate::setupPointerArrayScanner(MM_EnvironmentBase *env, omrobjectptr_t objectPtr, MM_MarkingSchemeScanReason reason, uintptr_t *sizeToDo, uintptr_t *slotsToDo, fomrobject_t **basePtr, uintptr_t *flags)
+MM_MarkingDelegate::setupPointerArrayScanner(MM_EnvironmentBase *env, omrobjectptr_t objectPtr, MM_MarkingSchemeScanReason reason, uintptr_t *sizeToDo, uintptr_t *slotsToDo, uintptr_t *totalSizeInElements, fomrobject_t **basePtr, uintptr_t *flags)
 {
 	uintptr_t startIndex = 0;
-#if defined JVM_GC_REALTIME
 
+
+				_markingScheme->setupPointerArrayScanner(env, objectPtr, reason, sizeToDo, slotsToDo, totalSizeInElements, basePtr, flags);
+
+#if defined J9VM_GC_REALTIME && 0
+	MM_RealtimeGC *realtimeGC = MM_GCExtensions::getExtensions(env)->realtimeGC;
 #if defined(J9VM_GC_DYNAMIC_CLASS_UNLOADING)
 	if(isDynamicClassUnloadingEnabled()) {
-		markClassOfObject(env, (J9Object *)objectPtr);
+		realtimeGC->getRealtimeDelegate()->markClassOfObject(MM_EnvironmentRealtime::getEnvironment(env), (J9Object *)objectPtr);
 	}
 #endif /* J9VM_GC_DYNAMIC_CLASS_UNLOADING */
 
@@ -618,14 +624,14 @@ MM_MarkingDelegate::setupPointerArrayScanner(MM_EnvironmentBase *env, omrobjectp
 	bool canSetAsScanned = (isContiguous
 			&& (_extensions->minArraySizeToSetAsScanned <= _extensions->indexableObjectModel.arrayletSize((J9IndexableObject*)objectPtr, 0)));
 
-	if (canSetAsScanned && _markingScheme->isScanned((J9Object *)objectPtr)) {
+	if (canSetAsScanned && realtimeGC->getMarkingScheme()->isScanned((J9Object *)objectPtr)) {
 		/* Already scanned by ref array copy optimization */
 		return 0;
 	}
 
 	/* if NUA is enabled, separate path for contiguous arrays */
-	UDATA sizeInElements = _extensions->indexableObjectModel.getSizeInElements((J9IndexableObject*)objectPtr);
-	fomrobject_t *startPtr;
+	uintptr_t sizeInElements = _extensions->indexableObjectModel.getSizeInElements((J9IndexableObject*)objectPtr);
+	fomrobject_t *startPtr = 0;
 
 	if (isContiguous || (0 == sizeInElements)) {
 		fj9object_t *startScanPtr = (fj9object_t *)_extensions->indexableObjectModel.getDataPointerForContiguous((J9IndexableObject*)objectPtr);
@@ -634,18 +640,19 @@ MM_MarkingDelegate::setupPointerArrayScanner(MM_EnvironmentBase *env, omrobjectp
 // Note: scanner will be created for this one after this function
 	} else {
 		fj9object_t *arrayoid = _extensions->indexableObjectModel.getArrayoidPointer((J9IndexableObject*)objectPtr);
-		UDATA numArraylets = _extensions->indexableObjectModel.numArraylets((J9IndexableObject*)objectPtr);
-		for (UDATA i=0; i<numArraylets; i++) {
-			UDATA arrayletSize = _extensions->indexableObjectModel.arrayletSize((J9IndexableObject*)objectPtr, i);
+		uintptr_t numArraylets = _extensions->indexableObjectModel.numArraylets((J9IndexableObject*)objectPtr);
+		J9JavaVM* javaVM = (J9JavaVM*)_omrVM->_language_vm;
+		for (uintptr_t i = 0; i < numArraylets; i++) {
+			uintptr_t arrayletSize = _extensions->indexableObjectModel.arrayletSize((J9IndexableObject*)objectPtr, i);
 			/* need to check leaf pointer because this can be a partially allocated arraylet (not all leafs are allocated) */
-			GC_SlotObject slotObject(_javaVM->omrVM, &arrayoid[i]);
+			GC_SlotObject slotObject(javaVM->omrVM, &arrayoid[i]);
 			fj9object_t *startScanPtr = (fj9object_t*) (slotObject.readReferenceFromSlot());
 			if (NULL != startScanPtr) {
 // fj9object_t *endScanPtr = startScanPtr + arrayletSize / sizeof(fj9object_t);
 				if (i == (numArraylets - 1)) {
 					// Note: scanner will be created for this one after this function
 					if (canSetAsScanned) {
-						_markingScheme->setScanAtomic((J9Object *)objectPtr);
+						realtimeGC->getMarkingScheme()->setScanAtomic((J9Object *)objectPtr);
 					}
 					startPtr = startScanPtr;
 					sizeInElements = arrayletSize / sizeof(fj9object_t);
@@ -656,8 +663,9 @@ MM_MarkingDelegate::setupPointerArrayScanner(MM_EnvironmentBase *env, omrobjectp
 		}
 	}
 
-	*sizeToDo = sizeInElements * sizeof(fomrobject_t));
+	*sizeToDo = sizeInElements * sizeof(fomrobject_t);
 	*slotsToDo = sizeInElements;
+	*totalSizeInElements = sizeInElements;
 	*basePtr = startPtr;
 	*flags = GC_ObjectScanner::indexableObjectNoSplit;
 
@@ -719,6 +727,7 @@ Assert_MM_true(_markingScheme->isHeapObject((omrobjectptr_t)startPtr));
 
 	*sizeToDo = headerBytesToScan + (slotsToScan * sizeof(fomrobject_t));
 	*slotsToDo = slotsToScan;
+	*totalSizeInElements = sizeInElements;
 	*basePtr = (fj9object_t *)_extensions->indexableObjectModel.getDataPointerForContiguous((omrarrayptr_t)objectPtr);
 	*flags = GC_ObjectScanner::indexableObject;
 

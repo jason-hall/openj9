@@ -31,7 +31,6 @@
 #include "BaseNonVirtual.hpp"
 #include "EnvironmentRealtime.hpp"
 #include "GCExtensions.hpp"
-#include "MetronomeArrayObjectScanner.hpp"
 #include "RealtimeAccessBarrier.hpp"
 #include "RealtimeMarkingScheme.hpp"
 #include "ReferenceObjectBuffer.hpp"
@@ -197,93 +196,6 @@ public:
 	}
 	bool markClass(MM_EnvironmentRealtime *env, J9Class *objectPtr);
 #endif /* defined(J9VM_GC_DYNAMIC_CLASS_UNLOADING) */
-
-	MMINLINE uintptr_t
-	scanPointerArraylet(MM_EnvironmentRealtime *env, fomrobject_t *arraylet)
-	{
-		fomrobject_t *startScanPtr = arraylet;
-		fomrobject_t *endScanPtr = startScanPtr + (_javaVM->arrayletLeafSize / sizeof(fj9object_t));
-		return scanPointerRange(env, startScanPtr, endScanPtr);
-	}
-
-	MMINLINE UDATA
-	scanPointerRange(MM_EnvironmentRealtime *env, fj9object_t *startScanPtr, fj9object_t *endScanPtr)
-	{
-		fj9object_t *scanPtr = startScanPtr;
-		UDATA pointerFieldBytes = (UDATA)(endScanPtr - scanPtr);
-		UDATA pointerField = pointerFieldBytes / sizeof(fj9object_t);
-		while(scanPtr < endScanPtr) {
-			GC_SlotObject slotObject(_javaVM->omrVM, scanPtr);
-			_markingScheme->markObject(env, slotObject.readReferenceFromSlot());
-			scanPtr++;
-		}
-
-		env->addScannedBytes(pointerFieldBytes);
-		env->addScannedPointerFields(pointerField);
-
-		return pointerField;
-	}
-
-MMINLINE UDATA
-	scanPointerArrayObject(MM_EnvironmentRealtime *env, omrobjectptr_t objectPtr)
-	{
-		UDATA pointerFields = 0;
-		
-#if defined(J9VM_GC_DYNAMIC_CLASS_UNLOADING)
-		if(isDynamicClassUnloadingEnabled()) {
-			markClassOfObject(env, (J9Object *)objectPtr);
-		}
-#endif /* J9VM_GC_DYNAMIC_CLASS_UNLOADING */
-
-
-		bool isContiguous = _extensions->indexableObjectModel.isInlineContiguousArraylet((J9IndexableObject*)objectPtr);
-
-		/* Very small arrays cannot be set as scanned (no scanned bit in Mark Map reserved for them) */
-		bool canSetAsScanned = (isContiguous
-				&& (_extensions->minArraySizeToSetAsScanned <= _extensions->indexableObjectModel.arrayletSize((J9IndexableObject*)objectPtr, 0)));
-
-		if (canSetAsScanned && _markingScheme->isScanned((J9Object *)objectPtr)) {
-			/* Already scanned by ref array copy optimization */
-			return pointerFields;
-		}
-
-		/* if NUA is enabled, separate path for contiguous arrays */
-		UDATA sizeInElements = _extensions->indexableObjectModel.getSizeInElements((J9IndexableObject*)objectPtr);
-		if (isContiguous || (0 == sizeInElements)) {
-			fj9object_t *startScanPtr = (fj9object_t *)_extensions->indexableObjectModel.getDataPointerForContiguous((J9IndexableObject*)objectPtr);
-			fj9object_t *endScanPtr = startScanPtr + sizeInElements;
-			pointerFields += scanPointerRange(env, startScanPtr, endScanPtr);
-		} else {
-			fj9object_t *arrayoid = _extensions->indexableObjectModel.getArrayoidPointer((J9IndexableObject*)objectPtr);
-			UDATA numArraylets = _extensions->indexableObjectModel.numArraylets((J9IndexableObject*)objectPtr);
-			for (UDATA i=0; i<numArraylets; i++) {
-				UDATA arrayletSize = _extensions->indexableObjectModel.arrayletSize((J9IndexableObject*)objectPtr, i);
-				/* need to check leaf pointer because this can be a partially allocated arraylet (not all leafs are allocated) */
-				GC_SlotObject slotObject(_javaVM->omrVM, &arrayoid[i]);
-				fj9object_t *startScanPtr = (fj9object_t*) (slotObject.readReferenceFromSlot());
-				if (NULL != startScanPtr) {
-					fj9object_t *endScanPtr = startScanPtr + arrayletSize / sizeof(fj9object_t);
-					if (i == (numArraylets - 1)) {
-						pointerFields += scanPointerRange(env, startScanPtr, endScanPtr);
-						if (canSetAsScanned) {
-							_markingScheme->setScanAtomic((J9Object *)objectPtr);
-						}
-					} else {
-						env->getWorkStack()->push(env, (void *)ARRAYLET_TO_ITEM(startScanPtr));
-					}
-				}
-			}
-		}
-
-		/* check for yield if we've actually scanned a leaf */
-		if (0 != pointerFields) {
-			_scheduler->condYieldFromGC(env);
-		}
-
-		env->incScannedObjects();
-
-		return pointerFields;
-	}
 
 #if defined(J9VM_GC_FINALIZATION)
 	void scanUnfinalizedObjects(MM_EnvironmentRealtime *env);

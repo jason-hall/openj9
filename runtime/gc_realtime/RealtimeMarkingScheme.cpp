@@ -213,7 +213,6 @@ uintptr_t
 MM_RealtimeMarkingScheme::scanObject(MM_EnvironmentRealtime *env, uintptr_t item, GC_ObjectScannerState *objectScannerState)
 {
 	uintptr_t scannedPointers = 0;
-
 	uintptr_t sizeToDo = UDATA_MAX;
 	GC_ObjectScanner *objectScanner = _delegate.getObjectScanner(env, (omrobjectptr_t)item, objectScannerState, SCAN_REASON_PACKET, &sizeToDo);
 	if (NULL != objectScanner) {

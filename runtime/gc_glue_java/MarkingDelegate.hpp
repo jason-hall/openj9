@@ -83,7 +83,7 @@ private:
 	MMINLINE void clearReference(MM_EnvironmentBase *env, omrobjectptr_t objectPtr, bool isReferenceCleared, bool referentMustBeCleared);
 	MMINLINE bool getReferenceStatus(MM_EnvironmentBase *env, omrobjectptr_t objectPtr, bool *referentMustBeMarked, bool *isReferenceCleared);
 	fomrobject_t *setupReferenceObjectScanner(MM_EnvironmentBase *env, omrobjectptr_t objectPtr, MM_MarkingSchemeScanReason reason);
-	uintptr_t setupPointerArrayScanner(MM_EnvironmentBase *env, omrobjectptr_t objectPtr, MM_MarkingSchemeScanReason reason, uintptr_t *sizeToDo, uintptr_t *slotsToDo, fomrobject_t **basePtr, uintptr_t *flags);
+	uintptr_t setupPointerArrayScanner(MM_EnvironmentBase *env, omrobjectptr_t objectPtr, MM_MarkingSchemeScanReason reason, uintptr_t *sizeToDo, uintptr_t *slotsToDo, uintptr_t *totalSizeInElements, fomrobject_t **basePtr, uintptr_t *flags);
 
 protected:
 
@@ -133,7 +133,7 @@ public:
 		GC_ObjectScanner *objectScanner = NULL;
 #if defined (J9VM_GC_REALTIME)
 		if (IS_ITEM_ARRAYLET((uintptr_t)objectPtr)) {
-			J9JavaVM* vm = (J9JavaVM*) _omrVM->_language_vm;
+			J9JavaVM* vm = (J9JavaVM*)_omrVM->_language_vm;
 			objectScanner = GC_PointerArrayObjectScanner::newInstance(env, objectPtr, ITEM_TO_ARRAYLET(objectPtr), scannerSpace, GC_ObjectScanner::indexableObjectNoSplit, (vm->arrayletLeafSize / sizeof(fj9object_t)), 0);
 		} else {
 #endif /* defined (J9VM_GC_REALTIME) */
@@ -152,9 +152,9 @@ public:
 				uintptr_t slotsToDo = 0;
 				uintptr_t flags = 0;
 				fomrobject_t *basePtr = 0;
-				uintptr_t startIndex = setupPointerArrayScanner(env, objectPtr, reason, sizeToDo, &slotsToDo, &basePtr, &flags);
-
-				objectScanner = GC_PointerArrayObjectScanner::newInstance(env, objectPtr, basePtr, scannerSpace, flags, slotsToDo, slotsToDo + startIndex, startIndex);
+				uintptr_t sizeInElements = 0;
+				uintptr_t startIndex = setupPointerArrayScanner(env, objectPtr, reason, sizeToDo, &slotsToDo, &sizeInElements, &basePtr, &flags);
+				objectScanner = GC_PointerArrayObjectScanner::newInstance(env, objectPtr, basePtr, scannerSpace, flags, slotsToDo, sizeInElements, startIndex);
 				break;
 			}
 			case GC_ObjectModel::SCAN_REFERENCE_MIXED_OBJECT:

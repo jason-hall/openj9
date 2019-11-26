@@ -111,6 +111,7 @@ public:
 
 	bool incrementalCompleteScan(MM_EnvironmentRealtime *env, uintptr_t maxCount);
 	uintptr_t scanObject(MM_EnvironmentRealtime *env, uintptr_t item, GC_ObjectScannerState *objectScannerState);
+	uintptr_t setupPointerArrayScanner(MM_EnvironmentBase *env, omrobjectptr_t objectPtr, MM_MarkingSchemeScanReason reason, uintptr_t *sizeToDo, uintptr_t *slotsToDo, uintptr_t *totalSizeInElements, fomrobject_t **basePtr, uintptr_t *flags) {Assert_MM_true(false); return 0;}
 
 	/**
 	 * Create a MM_RealtimeMarkingScheme object
